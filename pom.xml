@@ -267,6 +267,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             </executions>
           </plugin>
 
+        </plugins>
+    
+      </build>
+    
+    </profile>
+  
+    <profile>
+      <id>lockss-apis</id>
+
+      <build>
+      
+        <plugins>
+        
           <!-- To create a pretty REST API diagram from docs/swagger.yaml -->
           <plugin>
             <groupId>io.swagger</groupId>
@@ -286,11 +299,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
           </plugin>
     
         </plugins>
-    
+        
       </build>
-    
+      
     </profile>
-  
+      
   </profiles>
   
 </project>
