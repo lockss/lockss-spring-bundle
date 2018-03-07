@@ -38,12 +38,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>1.5.9.RELEASE</version>
+    <version>1.5.10.RELEASE</version>
   </parent>
   
   <groupId>org.lockss</groupId>
   <artifactId>lockss-spring-parent-pom</artifactId>
-  <version>1.1.0</version>
+  <version>1.2.0</version>
   <packaging>pom</packaging>
   
   <name>lockss-spring-parent-pom</name>
@@ -136,6 +136,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     <java.version>1.8</java.version>
     <maven.compiler.source>${java.version}</maven.compiler.source>
     <maven.compiler.target>${java.version}</maven.compiler.target>
+    <test.fork.count>1.0C</test.fork.count>
     
     <!-- Git related -->
     <gitSshUsername>git</gitSshUsername>
@@ -147,8 +148,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     <scmUrl>https://${gitHost}/${gitGroupId}/${gitProjectId}</scmUrl>
 
     <!-- Our own -->
-    <skip.integration.tests>true</skip.integration.tests>
-    <skip.unit.tests>false</skip.unit.tests>
+    <skipTests>false</skipTests>
+    <skipIntegrationTests>true</skipIntegrationTests>
     <loglevel>info</loglevel>
     <outputtofile>true</outputtofile>
     <trimstack>false</trimstack>
@@ -165,8 +166,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.20.1</version>
+        <version>2.21.0</version>
         <configuration>
+          <skipTests>${skipTests}</skipTests>
           <includes>
             <include>**/Test*.java</include>
             <include>**/Func*.java</include>
@@ -178,7 +180,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 	    <exclude>**/*$*</exclude>
           </excludes>
           <redirectTestOutputToFile>${outputtofile}</redirectTestOutputToFile>
-          <forkCount>1.0C</forkCount>
+          <forkCount>${test.fork.count}</forkCount>
           <reuseForks>false</reuseForks>
 	  <trimStackTrace>${trimstack}</trimStackTrace>
           <systemPropertyVariables>
@@ -260,7 +262,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-javadoc-plugin</artifactId>
-            <version>2.9.1</version>
+            <version>3.0.0</version>
             <executions>
               <execution>
                 <id>attach-javadocs</id>
@@ -269,6 +271,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 </goals>
               </execution>
             </executions>
+	    <configuration>
+	      <doclint>none</doclint>
+	    </configuration>
           </plugin>
 
         </plugins>
