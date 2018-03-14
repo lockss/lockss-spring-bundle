@@ -38,12 +38,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>1.5.10.RELEASE</version>
+    <version>1.5.9.RELEASE</version>
   </parent>
   
   <groupId>org.lockss</groupId>
   <artifactId>lockss-spring-parent-pom</artifactId>
-  <version>1.2.0</version>
+  <version>1.2.1</version>
   <packaging>pom</packaging>
   
   <name>lockss-spring-parent-pom</name>
