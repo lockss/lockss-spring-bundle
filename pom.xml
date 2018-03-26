@@ -155,8 +155,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     <trimstack>false</trimstack>
 
     <!--  Spring related -->
-    <spring-version>1.5.9.RELEASE</spring-version>
-    <springfox-version>2.6.1</springfox-version>
+    <spring-boot.version>1.5.9.RELEASE</spring-boot.version>
+    <!-- Deprecated property name, use spring-boot.version -->
+    <spring-version>${spring-boot.version}</spring-version>
+    <skipSpringBootRepackage>false</skipSpringBootRepackage>
+    <springfox.version>2.6.1</springfox.version>
+    <!-- Deprecated property name, use springfox.version -->
+    <springfox-version>${springfox.version}</springfox-version>
   </properties>
   
   <dependencies>
@@ -164,22 +169,23 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>
-      <version>${spring-version}</version>
+      <version>${spring-boot.version}</version>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-tomcat</artifactId>
-      <version>${spring-version}</version>
+      <version>${spring-boot.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-security</artifactId>
-      <version>${spring-version}</version>
+      <version>${spring-boot.version}</version>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
+      <version>${spring-boot.version}</version>
       <scope>test</scope>
     </dependency>
 
@@ -235,6 +241,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             <goals>
               <goal>repackage</goal>
             </goals>
+            <configuration>
+              <skip>${skipSpringBootRepackage}</skip>
+            </configuration>
           </execution>
         </executions>
       </plugin>
