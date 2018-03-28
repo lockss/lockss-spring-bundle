@@ -43,7 +43,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   
   <groupId>org.lockss</groupId>
   <artifactId>lockss-spring-parent-pom</artifactId>
-  <version>1.5.0</version>
+  <version>1.6.0</version>
   <packaging>pom</packaging>
   
   <name>lockss-spring-parent-pom</name>
@@ -246,6 +246,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         <configuration>
           <useIncrementalCompilation>false</useIncrementalCompilation>
         </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>repackage</goal>
+            </goals>
+            <configuration>
+              <skip>${skipSpringBootRepackage}</skip>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
 
           <!--  To deploy Source JARs to Maven Central; see http://central.sonatype.org/pages/apache-maven.html -->
