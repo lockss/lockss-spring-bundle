@@ -43,7 +43,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   
   <groupId>org.lockss</groupId>
   <artifactId>lockss-spring-bundle</artifactId>
-  <version>1.8.0-SNAPSHOT</version>
+  <version>1.7.0</version>
   <packaging>pom</packaging>
   
   <name>lockss-spring-bundle</name>
