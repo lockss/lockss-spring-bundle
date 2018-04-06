@@ -36,76 +36,18 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   <modelVersion>4.0.0</modelVersion>
   
   <parent>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-parent</artifactId>
-    <version>1.5.9.RELEASE</version>
+    <groupId>org.lockss</groupId>
+    <artifactId>lockss-parent-pom</artifactId>
+    <version>1.6.0</version>
   </parent>
   
   <groupId>org.lockss</groupId>
-  <artifactId>lockss-spring-parent-pom</artifactId>
+  <artifactId>lockss-spring-bundle</artifactId>
   <version>1.7.0-SNAPSHOT</version>
   <packaging>pom</packaging>
   
-  <name>lockss-spring-parent-pom</name>
-  <description>Maven infrastructure common to LOCKSS projects built with the Spring Framework</description>
-  <url>https://www.lockss.org/</url>
-  <inceptionYear>2000</inceptionYear>
-
-  <organization>
-    <name>LOCKSS Program</name>
-    <url>https://www.lockss.org/</url>
-  </organization>
-  
-  <licenses>
-    <license>
-      <name>3-Clause BSD License</name>
-      <url>https://opensource.org/licenses/BSD-3-Clause</url>
-    </license>
-  </licenses>
-  
-  <!--
-      For each developer alphabetically by last name:
-      - <id> is the GitHub username
-      - <email> is the GPG e-mail address
-      There is also a parallel <contributors> stanza
-  -->
-  <developers>
-    <developer>
-      <id>fergaloy</id>
-      <name>Fernando García-Loygorri</name>
-      <email>fergaloy@lockss.org</email>
-      <organization>LOCKSS Program</organization>
-      <organizationUrl>https://www.lockss.org/</organizationUrl>
-    </developer>
-    <developer>
-      <id>clairegriffin</id>
-      <name>Claire Griffin</name>
-      <email>clairetg@stanford.edu</email>
-      <organization>LOCKSS Program</organization>
-      <organizationUrl>https://www.lockss.org/</organizationUrl>
-    </developer>
-    <developer>
-      <id>thibgc</id>
-      <name>Thib Guicherd-Callin</name>
-      <email>thib@cs.stanford.edu</email>
-      <organization>LOCKSS Program</organization>
-      <organizationUrl>https://www.lockss.org/</organizationUrl>
-    </developer>
-    <developer>
-      <id>tlipkis</id>
-      <name>Tom Lipkis</name>
-      <email>tal@lockss.org</email>
-      <organization>LOCKSS Program</organization>
-      <organizationUrl>https://www.lockss.org/</organizationUrl>
-    </developer>
-    <developer>
-      <id>dlvargas</id>
-      <name>Daniel Vargas</name>
-      <email>dlvargas@stanford.edu</email>
-      <organization>LOCKSS Program</organization>
-      <organizationUrl>https://www.lockss.org/</organizationUrl>
-    </developer>
-  </developers>
+  <name>lockss-spring-bundle</name>
+  <description>POM bundle for LOCKSS projects using Spring Boot</description>
 
   <!-- Must be in every lockss-parent-pom/lockss-spring-parent-pom descendant -->
   <scm>
@@ -114,304 +56,72 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     <url>${scmUrl}</url>
   </scm>
   
-  <distributionManagement>
-
-    <!--  To deploy to Maven Central; see http://central.sonatype.org/pages/apache-maven.html  -->
-    <snapshotRepository>
-      <id>ossrh</id>
-      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-    </snapshotRepository>
-    <repository>
-      <id>ossrh</id>
-      <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-    </repository>
-    
-  </distributionManagement>
-
-  <properties>
-
-    <!-- Java related -->
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <java.version>1.8</java.version>
-    <maven.compiler.source>${java.version}</maven.compiler.source>
-    <maven.compiler.target>${java.version}</maven.compiler.target>
-    <test.fork.count>1.0C</test.fork.count>
-    
-    <!-- Git related -->
-    <gitSshUsername>git</gitSshUsername>
-    <gitHost>github.com</gitHost>
-    <gitGroupId>lockss</gitGroupId>
-    <gitProjectId>${project.artifactId}</gitProjectId>
-    <scmConnection>scm:git:git://${gitHost}/${gitGroupId}/${gitProjectId}.git</scmConnection>
-    <scmDeveloperConnection>scm:git:${gitSshUsername}@${gitHost}:${gitGroupId}/${gitProjectId}.git</scmDeveloperConnection>
-    <scmUrl>https://${gitHost}/${gitGroupId}/${gitProjectId}</scmUrl>
-
-    <!-- Release related -->
-    <skipJavadoc>true</skipJavadoc>
-    <skipSources>true</skipSources>
-    <skipGpg>true</skipGpg>
-    <skipDockerfile>true</skipDockerfile><!-- set to false in child that requires Dockerfile processing -->
-    <skipDockerFileBuild>true</skipDockerFileBuild>
-    <skipDockerfilePush>true</skipDockerfilePush>
-
-    <!--  Docker related -->
-    <docker.image.prefix>lockss</docker.image.prefix>
-    <dockerfile.skip>${skipDockerfile}</dockerfile.skip>
-    <dockerfile.build.skip>${skipDockerfileBuild}</dockerfile.build.skip>
-    <dockerfile.tag.skip>${skipDockerfilePush}</dockerfile.tag.skip>
-    <dockerfile.push.skip>${skipDockerfilePush}</dockerfile.push.skip>
-
-    <!-- Our own -->
-    <skipTests>false</skipTests>
-    <skipIntegrationTests>true</skipIntegrationTests>
-    <loglevel>info</loglevel>
-    <outputtofile>true</outputtofile>
-    <trimstack>false</trimstack>
-
-    <!--  Spring related -->
-    <spring-boot.version>1.5.9.RELEASE</spring-boot.version>
-    <!-- Deprecated property name, use spring-boot.version -->
-    <spring-version>${spring-boot.version}</spring-version>
-    <skipSpringBootRepackage>false</skipSpringBootRepackage>
-    <springfox.version>2.6.1</springfox.version>
-    <!-- Deprecated property name, use springfox.version -->
-    <springfox-version>${springfox.version}</springfox-version>
-  </properties>
-  
   <dependencies>
 
     <dependency>
       <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-web</artifactId>
-      <version>${spring-boot.version}</version>
+      <artifactId>spring-boot-starter-parent</artifactId>
+      <version>${lockss.spring.version}</version>
+      <type>pom</type>
     </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+      <version>${lockss.spring.version}</version>
+      <exclusions>
+        <!-- Avoid http://www.slf4j.org/codes.html#log4jDelegationLoop -->
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>log4j-over-slf4j</artifactId>
+        </exclusion>
+        <!-- Avoid Logback vs. SLF4J conflict -->
+        <exclusion>
+          <groupId>ch.qos.logback</groupId>
+          <artifactId>logback-classic</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-tomcat</artifactId>
-      <version>${spring-boot.version}</version>
+      <version>${lockss.spring.version}</version>
       <scope>provided</scope>
     </dependency>
+
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-security</artifactId>
-      <version>${spring-boot.version}</version>
+      <version>${lockss.spring.version}</version>
     </dependency>
+
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
-      <version>${spring-boot.version}</version>
-      <scope>test</scope>
+      <version>${lockss.spring.version}</version>
+<!--       <scope>test</scope> -->
+      <exclusions>
+        <!-- has an old version of JSONException -->
+        <exclusion>
+          <groupId>com.vaadin.external.google</groupId>
+          <artifactId>android-json</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>io.springfox</groupId>
+      <artifactId>springfox-swagger2</artifactId>
+      <version>${lockss.springfox.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>io.springfox</groupId>
+      <artifactId>springfox-swagger-ui</artifactId>
+      <version>${lockss.springfox.version}</version>
     </dependency>
 
   </dependencies>
 
-  <build>
-  
-    <plugins>
-    
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.21.0</version>
-        <configuration>
-          <skipTests>${skipTests}</skipTests>
-          <includes>
-            <include>**/Test*.java</include>
-            <include>**/Func*.java</include>
-          </includes>
-          <excludes>
-	    <!-- SOAP tests waiting for Jetty upgrade -->
-            <exclude>**/ws/*/Func*.java</exclude>
-	    <!-- Default excludes -->
-	    <exclude>**/*$*</exclude>
-          </excludes>
-          <redirectTestOutputToFile>${outputtofile}</redirectTestOutputToFile>
-          <forkCount>${test.fork.count}</forkCount>
-          <reuseForks>false</reuseForks>
-	  <trimStackTrace>${trimstack}</trimStackTrace>
-          <systemPropertyVariables>
-            <org.lockss.unitTesting>true</org.lockss.unitTesting>
-            <org.lockss.defaultLogLevel>${loglevel}</org.lockss.defaultLogLevel>
-            <org.lockss.defaultLogTarget>org.lockss.util.StdErrTarget</org.lockss.defaultLogTarget>
-          </systemPropertyVariables>
-        </configuration>
-      </plugin>
-
-      <!-- For useIncrementalCompilation=false -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.7.0</version>
-        <configuration>
-          <useIncrementalCompilation>false</useIncrementalCompilation>
-        </configuration>
-      </plugin>
-
-      <plugin>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <goals>
-              <goal>repackage</goal>
-            </goals>
-            <configuration>
-              <skip>${skipSpringBootRepackage}</skip>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
-          <!--  To deploy Source JARs to Maven Central; see http://central.sonatype.org/pages/apache-maven.html -->
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-source-plugin</artifactId>
-            <version>3.0.1</version>
-            <executions>
-              <execution>
-                <id>attach-sources</id>
-                <goals>
-                  <goal>jar-no-fork</goal>
-                </goals>
-              </execution>
-            </executions>
-	    <configuration>
-	      <skipSource>${skipSources}</skipSource>
-	    </configuration>
-          </plugin>
-        
-          <!--  To deploy Javadoc JARS to Maven Central; see http://central.sonatype.org/pages/apache-maven.html -->
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-javadoc-plugin</artifactId>
-            <version>3.0.0</version>
-            <executions>
-              <execution>
-                <id>attach-javadocs</id>
-                <goals>
-                  <goal>jar</goal>
-                </goals>
-              </execution>
-            </executions>
-	    <configuration>
-	      <skip>${skipJavadoc}</skip>
-	      <doclint>none</doclint>
-	    </configuration>
-          </plugin>
-
-          <!--  To deploy GPG-signed components to Maven Central; see http://central.sonatype.org/pages/apache-maven.html -->
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-gpg-plugin</artifactId>
-            <version>1.6</version>
-            <executions>
-              <execution>
-                <id>sign-artifacts</id>
-                <phase>verify</phase>
-                <goals>
-                  <goal>sign</goal>
-                </goals>
-              </execution>
-            </executions>
-	    <configuration>
-	      <skip>${skipGpg}</skip>
-	    </configuration>
-          </plugin>
-        
-          <plugin>
-            <groupId>com.spotify</groupId>
-            <artifactId>dockerfile-maven-plugin</artifactId>
-            <version>1.4.0</version>
-            <executions>
-              <execution>
-                <id>default</id>
-                <goals>
-                  <goal>build</goal>
-                  <goal>push</goal>
-                </goals>
-              </execution>
-            </executions>
-            <configuration>
-              <repository>${docker.image.prefix}/${project.artifactId}</repository>
-	      <buildArgs>
-                <JAR_FILE>target/${project.build.finalName}.jar</JAR_FILE>
-	      </buildArgs>
-            </configuration>
-          </plugin>
-
-    </plugins>
-  
-  </build>
-  
-  <profiles>
-  
-    <profile>
-      <id>lockss-release</id>
-
-      <properties>
-        <skipJavadoc>false</skipJavadoc>
-        <skipSources>false</skipSources>
-        <skipGpg>false</skipGpg>
-        <!-- skipDockerfile remains true unless Dockerfile processing enabled in child -->
-        <skipDockerfileBuild>false</skipDockerfileBuild>
-        <skipDockerfilePush>false</skipDockerfilePush>
-      </properties>
-        
-      <build>
-      
-        <plugins>
-      
-          <!--  To deploy to Maven Central; see http://central.sonatype.org/pages/apache-maven.html  -->
-          <plugin>
-            <groupId>org.sonatype.plugins</groupId>
-            <artifactId>nexus-staging-maven-plugin</artifactId>
-            <version>1.6.8</version>
-            <extensions>true</extensions>
-            <configuration>
-              <serverId>ossrh</serverId>
-              <nexusUrl>https://oss.sonatype.org/</nexusUrl>
-              <autoReleaseAfterClose>true</autoReleaseAfterClose>
-            </configuration>
-          </plugin>
-          
-        </plugins>
-    
-      </build>
-    
-    </profile>
-  
-    <profile>
-      <id>lockss-apis</id>
-
-      <build>
-      
-        <plugins>
-        
-          <!-- To create a pretty REST API diagram from docs/swagger.yaml -->
-          <plugin>
-            <groupId>io.swagger</groupId>
-            <artifactId>swagger-codegen-maven-plugin</artifactId>
-            <version>2.2.3</version>
-            <executions>
-              <execution>
-                <goals>
-                  <goal>generate</goal>
-                </goals>
-                <configuration>
-                  <inputSpec>docs/swagger.yaml</inputSpec>
-                  <language>html</language>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-    
-        </plugins>
-        
-      </build>
-      
-    </profile>
-      
-  </profiles>
-  
 </project>
