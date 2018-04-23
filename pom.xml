@@ -68,14 +68,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-parent</artifactId>
-      <version>${lockss.spring.version}</version>
+      <version>${lockss.spring-boot.version}</version>
       <type>pom</type>
     </dependency>
 
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>
-      <version>${lockss.spring.version}</version>
+      <version>${lockss.spring-boot.version}</version>
       <exclusions>
         <!-- Avoid http://www.slf4j.org/codes.html#log4jDelegationLoop -->
         <exclusion>
@@ -93,25 +93,25 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-tomcat</artifactId>
-      <version>${lockss.spring.version}</version>
+      <version>${lockss.spring-boot.version}</version>
       <scope>provided</scope>
     </dependency>
 
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-security</artifactId>
-      <version>${lockss.spring.version}</version>
+      <version>${lockss.spring-boot.version}</version>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-activemq</artifactId>
-      <version>${lockss.spring.version}</version>
+      <version>${lockss.spring-boot.version}</version>
     </dependency>
 
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
-      <version>${lockss.spring.version}</version>
+      <version>${lockss.spring-boot.version}</version>
 <!--       <scope>test</scope> -->
       <exclusions>
         <!-- has an old version of JSONException -->
