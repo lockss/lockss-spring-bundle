@@ -44,10 +44,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   <groupId>org.lockss</groupId>
   <artifactId>lockss-spring-bundle</artifactId>
   <version>1.8.0-SNAPSHOT</version>
-  <packaging>pom</packaging>
-  
+  <packaging>jar</packaging>
+
   <name>lockss-spring-bundle</name>
-  <description>POM bundle for LOCKSS projects using Spring Boot</description>
+  <description>POM bundle and classes for LOCKSS projects using Spring Boot</description>
 
   <!-- Must be in every lockss-parent-pom descendant -->
   <scm>
@@ -57,6 +57,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   </scm>
   
   <dependencies>
+
+    <dependency>
+      <groupId>org.lockss</groupId>
+      <artifactId>lockss-core-bundle</artifactId>
+      <version>${lockss.core.bundleVersion}</version>
+      <type>pom</type>
+    </dependency>
 
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -93,6 +100,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-security</artifactId>
+      <version>${lockss.spring.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-activemq</artifactId>
       <version>${lockss.spring.version}</version>
     </dependency>
 
