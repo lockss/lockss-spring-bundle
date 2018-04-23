@@ -35,7 +35,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
-
+import org.lockss.laaws.status.model.ApiStatus;
 import org.lockss.util.Logger;
 
 /**
