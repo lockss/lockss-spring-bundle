@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2000-2017 Board of Trustees of Leland Stanford Jr. University,
+Copyright (c) 2000-2019 Board of Trustees of Leland Stanford Jr. University,
 all rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -31,12 +31,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package org.lockss.spring.status;
 
+import org.lockss.laaws.status.model.ApiStatus;
+import org.lockss.log.L4JLogger;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
-import org.lockss.laaws.status.model.ApiStatus;
-import org.lockss.util.Logger;
 
 /**
  * LOCKSS base controller for Spring REST web services.
@@ -44,8 +44,7 @@ import org.lockss.util.Logger;
 public abstract class SpringLockssBaseApiController
     implements SpringLockssBaseApi {
 
-  private static final Logger log =
-      Logger.getLogger(SpringLockssBaseApiController.class);
+  private static final L4JLogger log = L4JLogger.getLogger();
 
   /**
    * Provides the status.
@@ -57,16 +56,11 @@ public abstract class SpringLockssBaseApiController
       produces = {"application/json"},
       method = RequestMethod.GET)
   public ResponseEntity<ApiStatus> getStatus() {
-    final String DEBUG_HEADER = "getStatus(): ";
-    if (log.isDebug2()) {
-      log.debug2(DEBUG_HEADER + "Invoked.");
-    }
+    log.debug2("Invoked.");
 
     try {
       ApiStatus result = getApiStatus();
-      if (log.isDebug3()) {
-        log.debug3("result = " + result);
-      }
+      log.trace("result = {}", result);
 
       return new ResponseEntity<ApiStatus>(result, HttpStatus.OK);
     } catch (Exception e) {

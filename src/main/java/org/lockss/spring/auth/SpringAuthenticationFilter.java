@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2000-2018 Board of Trustees of Leland Stanford Jr. University,
+Copyright (c) 2000-2019 Board of Trustees of Leland Stanford Jr. University,
 all rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -42,28 +42,27 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.lockss.account.UserAccount;
+import org.lockss.app.LockssDaemon;
+import org.lockss.log.L4JLogger;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.GenericFilterBean;
 
-import org.lockss.account.UserAccount;
-import org.lockss.app.LockssDaemon;
-import org.lockss.util.Logger;
-
 /**
  * Default LOCKSS custom Spring authentication filter.
  */
 public class SpringAuthenticationFilter extends GenericFilterBean {
 
-  public static final String noAuthorizationHeader = "No authorization header.";
-  public static final String noCredentials = "No userid/password credentials.";
-  public static final String badCredentials =
+  private static final String noAuthorizationHeader =
+      "No authorization header.";
+  private static final String noCredentials = "No userid/password credentials.";
+  private static final String badCredentials =
       "Bad userid/password credentials.";
-  public static final String noUser = "User not found.";
-  private final static Logger log =
-      Logger.getLogger(SpringAuthenticationFilter.class);
+  private static final String noUser = "User not found.";
+  private final static L4JLogger log = L4JLogger.getLogger();
 
   /**
    * Authentication filter.
@@ -77,21 +76,18 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
   @Override
   public void doFilter(ServletRequest request, ServletResponse response,
       FilterChain chain) throws IOException, ServletException {
-    final String DEBUG_HEADER = "doFilter(): ";
-    if (log.isDebug2()) {
-      log.debug2(DEBUG_HEADER + "Invoked.");
-    }
+    log.debug2("Invoked.");
 
     HttpServletRequest httpRequest = (HttpServletRequest) request;
 
-    if (log.isDebug3()) {
+    if (log.isTraceEnabled()) {
       StringBuffer originalUrl = httpRequest.getRequestURL();
 
       if (httpRequest.getQueryString() != null) {
         originalUrl.append("?").append(httpRequest.getQueryString());
       }
 
-      log.debug3(DEBUG_HEADER + "originalUrl = " + originalUrl);
+      log.trace("originalUrl = {}", originalUrl);
     }
 
     HttpServletResponse httpResponse = (HttpServletResponse) response;
@@ -100,9 +96,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
       // Check whether authentication is not required at all.
       if (!AuthUtil.isAuthenticationOn()) {
         // Yes: Continue normally.
-        if (log.isDebug3()) {
-          log.debug3(DEBUG_HEADER + "Authorized (like everybody else).");
-        }
+	log.trace("Authorized (like everybody else).");
 
         SecurityContextHolder.getContext().setAuthentication(
             getUnauthenticatedUserToken());
@@ -113,20 +107,18 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
       }
     } catch (AccessControlException ace) {
       // Report the configuration problem.
-      log.error(ace.getMessage());
+      String message = ace.getMessage();
+      log.error(message);
 
       SecurityContextHolder.clearContext();
-      httpResponse.sendError(HttpServletResponse.SC_FORBIDDEN,
-          ace.getMessage());
+      httpResponse.sendError(HttpServletResponse.SC_FORBIDDEN, message);
       return;
     }
 
     // No: Check whether this request is available to everybody.
     if (isWorldReachable(httpRequest)) {
       // Yes: Continue normally.
-      if (log.isDebug3()) {
-        log.debug3(DEBUG_HEADER + "Authenticated (like everybody else).");
-      }
+      log.trace("Authenticated (like everybody else).");
 
       SecurityContextHolder.getContext().setAuthentication(
           getUnauthenticatedUserToken());
@@ -138,9 +130,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
 
     // No: Get the authorization header.
     String authorizationHeader = httpRequest.getHeader("authorization");
-    if (log.isDebug3()) {
-      log.debug3(DEBUG_HEADER + "authorizationHeader = " + authorizationHeader);
-    }
+    log.trace("authorizationHeader = {}", authorizationHeader);
 
     // Check whether no authorization header was found.
     if (authorizationHeader == null) {
@@ -180,9 +170,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
       return;
     }
 
-    if (log.isDebug3()) {
-      log.debug3(DEBUG_HEADER + "credentials[0] = " + credentials[0]);
-    }
+    log.trace("credentials[0] = {}", credentials[0]);
 
     // No: Get the user account.
     UserAccount userAccount = null;
@@ -191,8 +179,8 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
       userAccount = LockssDaemon.getLockssDaemon().getAccountManager()
           .getUser(credentials[0]);
     } catch (Exception e) {
-      log.error("credentials[0] = " + credentials[0]);
-      log.error("credentials[1] = " + credentials[1]);
+      log.error("credentials[0] = {}", credentials[0]);
+      log.error("credentials[1] = {}", credentials[1]);
       log.error("LockssDaemon.getLockssDaemon().getAccountManager()."
           + "getUser(credentials[0])", e);
     }
@@ -208,23 +196,18 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
       return;
     }
 
-    if (log.isDebug3()) {
-      log.debug3(DEBUG_HEADER
-          + "userAccount.getName() = " + userAccount.getName());
-    }
+    log.trace("userAccount.getName() = {}", userAccount.getName());
 
     // No: Verify the user credentials.
     boolean goodCredentials = userAccount.check(credentials[1]);
-    if (log.isDebug3()) {
-      log.debug3(DEBUG_HEADER + "goodCredentials = " + goodCredentials);
-    }
+    log.trace("goodCredentials = {}", goodCredentials);
 
     // Check whether the user credentials are not good.
     if (!goodCredentials) {
       // Yes: Report the problem.
       log.info(badCredentials);
-      log.info("userAccount.getName() = " + userAccount.getName());
-      log.info("bad credentials = " + Arrays.toString(credentials));
+      log.info("userAccount.getName() = {}", userAccount.getName());
+      log.info("bad credentials = {}", Arrays.toString(credentials));
 
       SecurityContextHolder.clearContext();
       httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED,
@@ -236,34 +219,26 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
     Collection<GrantedAuthority> roles = new HashSet<GrantedAuthority>();
 
     for (Object role : userAccount.getRoleSet()) {
-      if (log.isDebug3()) {
-        log.debug3(DEBUG_HEADER + "role = " + role);
-      }
+      log.trace("role = {}", role);
       roles.add(new SimpleGrantedAuthority((String) role));
     }
 
-    if (log.isDebug3()) {
-      log.debug3(DEBUG_HEADER + "roles = " + roles);
-    }
+    log.trace("roles = {}", roles);
 
     // Create the completed authentication details.
     UsernamePasswordAuthenticationToken authentication =
         new UsernamePasswordAuthenticationToken(credentials[0],
             credentials[1], roles);
-    if (log.isDebug3()) {
-      log.debug3(DEBUG_HEADER + "authentication = " + authentication);
-    }
+    log.trace("authentication = {}", authentication);
 
     // Provide the completed authentication details.
     SecurityContextHolder.getContext().setAuthentication(authentication);
-    log.debug(DEBUG_HEADER + "User successfully authenticated");
+    log.debug("User successfully authenticated");
 
     // Continue the chain.
     chain.doFilter(request, response);
 
-    if (log.isDebug2()) {
-      log.debug2(DEBUG_HEADER + "Done.");
-    }
+    log.debug2("Done.");
   }
 
   /**
@@ -288,29 +263,20 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
    * <code>false</code> otherwise.
    */
   private boolean isWorldReachable(HttpServletRequest httpRequest) {
-    final String DEBUG_HEADER = "isWorldReachable(): ";
-    if (log.isDebug2()) {
-      log.debug2(DEBUG_HEADER + "Invoked.");
-    }
+    log.debug2("Invoked.");
 
     // Get the HTTP request method name.
     String httpMethodName = httpRequest.getMethod().toUpperCase();
-    if (log.isDebug3()) {
-      log.debug3(DEBUG_HEADER + "httpMethodName = " + httpMethodName);
-    }
+    log.trace("httpMethodName = {}", httpMethodName);
 
     // Get the HTTP request URI.
     String requestUri = httpRequest.getRequestURI().toLowerCase();
-    if (log.isDebug3()) {
-      log.debug3(DEBUG_HEADER + "requestUri = " + requestUri);
-    }
+    log.trace("requestUri = {}", requestUri);
 
     // Determine whether it is world-reachable.
     boolean result = getRequestUriAuthenticationBypass()
         .isWorldReachable(httpMethodName, requestUri);
-    if (log.isDebug2()) {
-      log.debug2(DEBUG_HEADER + "result = " + result);
-    }
+    log.debug2("result = {}", result);
     return result;
   }
 
@@ -322,18 +288,12 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
    * execute an operation.
    */
   public static void checkAuthorization(String... permissibleRoles) {
-    final String DEBUG_HEADER = "checkAuthorization(): ";
-    if (log.isDebug2()) {
-      log.debug2(DEBUG_HEADER
-          + "permissibleRoles = " + Arrays.toString(permissibleRoles));
-    }
+    log.debug2("permissibleRoles = {}", Arrays.toString(permissibleRoles));
 
     AuthUtil.checkAuthorization(SecurityContextHolder.getContext()
         .getAuthentication().getName(), permissibleRoles);
 
-    if (log.isDebug2()) {
-      log.debug2(DEBUG_HEADER + "Done.");
-    }
+    log.debug2("Done.");
   }
 
   /**

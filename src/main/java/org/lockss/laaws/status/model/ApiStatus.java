@@ -28,42 +28,70 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
- */
-package org.lockss.spring.auth;
-
-import org.lockss.log.L4JLogger;
+*/
+package org.lockss.laaws.status.model;
 
 /**
- * Default LOCKSS authentication bypass implementation.
+ * Representation of the status of a REST web service.
  */
-public class RequestUriAuthenticationBypassImpl
-    implements RequestUriAuthenticationBypass {
-
-  private final static L4JLogger log = L4JLogger.getLogger();
+public class ApiStatus {
 
   /**
-   * Provides an indication of whether access to a given URI with a given method
-   * is available to everybody.
-   *
-   * @param httpMethodName A String with the request method.
-   * @param requestUri A String with the request URI.
-   * @return <code>true</code> if this request is available to everybody,
-   * <code>false</code> otherwise.
+   * The version of the REST web service.
    */
-  public boolean isWorldReachable(String httpMethodName, String requestUri) {
-    log.debug2("httpMethodName = {}", httpMethodName);
-    log.debug2("requestUri = {}", requestUri);
+  private String version = null;
 
-    // Determine whether it is world-reachable.
-    boolean result = ("GET".equals(httpMethodName)
-        && ("/status".equals(requestUri)
-        || "/v2/api-docs".equals(requestUri)
-        || "/swagger-ui.html".equals(requestUri)
-        || requestUri.startsWith("/swagger-resources")
-        || requestUri.startsWith("/webjars/springfox-swagger-ui"))
-    );
+  /**
+   * An indication of whether the REST web service is ready to process requests.
+   */
+  private Boolean ready = Boolean.FALSE;
 
-    log.debug2("result = {}", result);
-    return result;
+  /**
+   * Provides the version of the REST web service.
+   * 
+   * @return a String with the version of the REST web service.
+   */
+  public String getVersion() {
+    return version;
+  }
+
+  /**
+   * Saves the version of the REST web service.
+   * 
+   * @param version
+   *          A String with the version of the REST web service.
+   * @return an ApiStatus with this object.
+   */
+  public ApiStatus setVersion(String version) {
+    this.version = version;
+    return this;
+  }
+
+  /**
+   * Provides an indication of whether the REST web service is available.
+   * 
+   * @return a Boolean with the indication of whether the REST web service is
+   *         available.
+   */
+  public Boolean isReady() {
+    return ready;
+  }
+
+  /**
+   * Saves the indication of whether the REST web service is available.
+   * 
+   * @param ready
+   *          A Boolean with the indication of whether the REST web service is
+   *          available.
+   * @return an ApiStatus with this object.
+   */
+  public ApiStatus setReady(Boolean ready) {
+    this.ready = ready;
+    return this;
+  }
+
+  @Override
+  public String toString() {
+    return "[ApiStatus version=" + version + ", ready=" + ready + "]";
   }
 }

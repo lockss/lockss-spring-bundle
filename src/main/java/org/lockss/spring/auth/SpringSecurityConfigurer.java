@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2000-2017 Board of Trustees of Leland Stanford Jr. University,
+Copyright (c) 2000-2019 Board of Trustees of Leland Stanford Jr. University,
 all rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -31,6 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 package org.lockss.spring.auth;
 
+import org.lockss.log.L4JLogger;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
@@ -42,8 +43,6 @@ import org.springframework.security.web.authentication.www.BasicAuthenticationFi
 import org.springframework.security.web.firewall.DefaultHttpFirewall;
 import org.springframework.security.web.firewall.HttpFirewall;
 
-import org.lockss.util.Logger;
-
 /**
  * Default LOCKSS custom Spring security configurator.
  */
@@ -52,9 +51,13 @@ import org.lockss.util.Logger;
 @EnableGlobalMethodSecurity(prePostEnabled = true)
 public class SpringSecurityConfigurer extends WebSecurityConfigurerAdapter {
 
-  private final static Logger log =
-      Logger.getLogger(SpringSecurityConfigurer.class);
+  private final static L4JLogger log = L4JLogger.getLogger();
 
+  /**
+   * Allows through encoded slashes in URLs.
+   * 
+   * @return an HttpFirewall set up to allow through encoded slashes in URLs.
+   */
   @Bean
   public HttpFirewall allowUrlEncodedSlashHttpFirewall() {
     DefaultHttpFirewall firewall = new DefaultHttpFirewall();
@@ -75,9 +78,7 @@ public class SpringSecurityConfigurer extends WebSecurityConfigurerAdapter {
    */
   @Override
   protected void configure(HttpSecurity http) throws Exception {
-    if (log.isDebug2()) {
-      log.debug2("Invoked.");
-    }
+    log.debug2("Invoked.");
 
     // Force each and every request to be authenticated.
     http.csrf().disable().authorizeRequests().anyRequest().authenticated();
@@ -85,8 +86,6 @@ public class SpringSecurityConfigurer extends WebSecurityConfigurerAdapter {
     // The Basic authentication filter to be used.
     http.addFilterBefore(new SpringAuthenticationFilter(),
         BasicAuthenticationFilter.class);
-    if (log.isDebug2()) {
-      log.debug2("Done.");
-    }
+    log.debug2("Done.");
   }
 }
