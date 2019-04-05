@@ -37,6 +37,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import java.io.InputStream;
 import org.lockss.log.L4JLogger;
+import org.lockss.util.BuildInfo;
 
 /**
  * Representation of the status of a REST web service.
@@ -45,9 +46,29 @@ public class ApiStatus {
   private static final L4JLogger log = L4JLogger.getLogger();
 
   /**
-   * The version of the REST web service.
+   * The name of the component.
    */
-  private String version = null;
+  private String componentName = null;
+
+  /**
+   * The name of the service.
+   */
+  private String serviceName = null;
+
+  /**
+   * The version of the LOCKSS system.
+   */
+  private String lockssVersion = null;
+
+  /**
+   * The version of the component software.
+   */
+  private String componentVersion = null;
+
+  /**
+   * The version of the API.
+   */
+  private String apiVersion = null;
 
   /**
    * An indication of whether the REST web service is ready to process requests.
@@ -70,33 +91,148 @@ public class ApiStatus {
     // Use an input stream to the Swagger YAML resource.
     try (InputStream is = Thread.currentThread().getContextClassLoader()
 	  .getResourceAsStream(swaggerYamlFileResource)) {
-      // Get the version from the Swagger YAML resource.
-      version = new ObjectMapper(new YAMLFactory())
-	  .readValue(is, SwaggerYaml.class).getInfo().getVersion();
-      log.trace("version = {}", version);
+      // Get the name of the component.
+      componentName = BuildInfo.getBuildProperty(BuildInfo.BUILD_RELEASENAME/*BUILD_COMPONENTNAME*/);
+      log.trace("componentName = {}", componentName);
+
+      // Get the Swagger YAML resource "info" entry.
+      SwaggerInfo swaggerInfo = new ObjectMapper(new YAMLFactory())
+	  .readValue(is, SwaggerYaml.class).getInfo();
+
+      // Get the service name.
+      serviceName = swaggerInfo.getTitle();
+      log.trace("serviceName = {}", serviceName);
+
+      // Get the LOCKSS version.
+      lockssVersion = BuildInfo.getBuildProperty(BuildInfo.BUILD_RELEASENAME);
+      log.trace("lockssVersion = {}", lockssVersion);
+
+      // Get the component version.
+      componentVersion = BuildInfo.getBuildProperty(BuildInfo.BUILD_RELEASENAME/*BUILD_VERSION*/);
+      log.trace("componentVersion = {}", componentVersion);
+
+      // Get the API version.
+      apiVersion = swaggerInfo.getVersion();
+      log.trace("apiVersion = {}", apiVersion);
     } catch (Exception e) {
       log.error("Exception caught getting the API version: ", e);
     }
   }
 
   /**
-   * Provides the version of the REST web service.
+   * Provides the name of the component.
    * 
-   * @return a String with the version of the REST web service.
+   * @return a String with the name of the component.
    */
-  public String getVersion() {
-    return version;
+  public String getComponentName() {
+    return componentName;
   }
 
   /**
-   * Saves the version of the REST web service.
+   * Saves the name of the component.
    * 
-   * @param version
-   *          A String with the version of the REST web service.
+   * @param componentName
+   *          A String with the name of the component.
    * @return an ApiStatus with this object.
    */
-  public ApiStatus setVersion(String version) {
-    this.version = version;
+  public ApiStatus setComponentName(String componentName) {
+    this.componentName = componentName;
+    return this;
+  }
+
+  /**
+   * Provides the name of the service.
+   * 
+   * @return a String with the name of the service.
+   */
+  public String getServiceName() {
+    return serviceName;
+  }
+
+  /**
+   * Saves the name of the service.
+   * 
+   * @param serviceName
+   *          A String with the name of the service.
+   * @return an ApiStatus with this object.
+   */
+  public ApiStatus setServiceName(String serviceName) {
+    this.serviceName = serviceName;
+    return this;
+  }
+
+  /**
+   * Provides the version of the LOCKSS system.
+   * 
+   * @return a String with the version of the LOCKSS system.
+   */
+  public String getLockssVersion() {
+    return lockssVersion;
+  }
+
+  /**
+   * Saves the version of the LOCKSS system.
+   * 
+   * @param lockssVersion
+   *          A String with the version of the LOCKSS system.
+   * @return an ApiStatus with this object.
+   */
+  public ApiStatus setLockssVersion(String lockssVersion) {
+    this.lockssVersion = lockssVersion;
+    return this;
+  }
+
+  /**
+   * Provides the version of the component.
+   * 
+   * @return a String with the version of the component.
+   */
+  public String getComponentVersion() {
+    return componentVersion;
+  }
+
+  /**
+   * Saves the version of the component.
+   * 
+   * @param componentVersion
+   *          A String with the version of the component.
+   * @return an ApiStatus with this object.
+   */
+  public ApiStatus setComponentVersion(String componentVersion) {
+    this.componentVersion = componentVersion;
+    return this;
+  }
+
+  /**
+   * Provides the version of the API.
+   * 
+   * @return a String with the version of the API.
+   */
+  public String getApiVersion() {
+    return apiVersion;
+  }
+
+  /**
+   * Saves the version of the API.
+   * 
+   * @param apiVersion
+   *          A String with the version of the API.
+   * @return an ApiStatus with this object.
+   */
+  public ApiStatus setApiVersion(String apiVersion) {
+    this.apiVersion = apiVersion;
+    return this;
+  }
+
+  /**
+   * Saves the version of the API.
+   * 
+   * @param apiVersion
+   *          A String with the version of the API.
+   * @return an ApiStatus with this object.
+   */
+  public ApiStatus setVersion(String apiVersion) {
+    this.apiVersion = apiVersion;
     return this;
   }
 
@@ -125,7 +261,10 @@ public class ApiStatus {
 
   @Override
   public String toString() {
-    return "[ApiStatus version=" + version + ", ready=" + ready + "]";
+    return "[ApiStatus componentName=" + componentName + ", serviceName="
+	+ serviceName + ", lockssVersion=" + lockssVersion
+	+ ", componentVersion=" + componentVersion + ", apiVersion="
+	+ apiVersion + ", ready=" + ready + "]";
   }
 
   /**
@@ -164,9 +303,32 @@ public class ApiStatus {
   // Ignore uninteresting entries in the Swagger YAML file top "info" entry.
   @JsonIgnoreProperties(ignoreUnknown = true)
   static class SwaggerInfo {
+    // The service name.
+    @JsonProperty
+    private String title;
+
     // The API version.
     @JsonProperty
     private String version;
+
+    /**
+     * Provides the API title.
+     * 
+     * @return a String with the API title.
+     */
+    public String getTitle() {
+      return title;
+    }
+
+    /**
+     * Saves the API title.
+     * 
+     * @param title
+     *          A String with the API title.
+     */
+    public void setTitle(String title) {
+      this.title = title;
+    }
 
     /**
      * Provides the API version.
