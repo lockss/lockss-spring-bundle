@@ -145,6 +145,12 @@ POSSIBILITY OF SUCH DAMAGE.
       <version>${version.group.springfox}</version>
     </dependency>
 
+    <dependency>
+      <groupId>com.fasterxml.jackson.dataformat</groupId>
+      <artifactId>jackson-dataformat-yaml</artifactId>
+      <version>${version.group.jackson}</version>
+    </dependency>
+
   </dependencies>
 
 </project>
