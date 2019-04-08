@@ -92,7 +92,7 @@ public class ApiStatus {
     try (InputStream is = Thread.currentThread().getContextClassLoader()
 	  .getResourceAsStream(swaggerYamlFileResource)) {
       // Get the name of the component.
-      componentName = BuildInfo.getBuildProperty(BuildInfo.BUILD_RELEASENAME/*BUILD_COMPONENTNAME*/);
+      componentName = BuildInfo.getBuildProperty(BuildInfo.BUILD_NAME);
       log.trace("componentName = {}", componentName);
 
       // Get the Swagger YAML resource "info" entry.
@@ -108,7 +108,7 @@ public class ApiStatus {
       log.trace("lockssVersion = {}", lockssVersion);
 
       // Get the component version.
-      componentVersion = BuildInfo.getBuildProperty(BuildInfo.BUILD_RELEASENAME/*BUILD_VERSION*/);
+      componentVersion = BuildInfo.getBuildProperty(BuildInfo.BUILD_VERSION);
       log.trace("componentVersion = {}", componentVersion);
 
       // Get the API version.
