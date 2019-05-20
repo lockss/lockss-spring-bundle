@@ -33,6 +33,7 @@ package org.lockss.laaws.status.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import java.io.InputStream;
@@ -265,6 +266,17 @@ public class ApiStatus {
 	+ serviceName + ", lockssVersion=" + lockssVersion
 	+ ", componentVersion=" + componentVersion + ", apiVersion="
 	+ apiVersion + ", ready=" + ready + "]";
+  }
+
+  /**
+   * Provides a JSON version of this object.
+   * 
+   * @return a String with a JSON version of this object.
+   * @throws JsonProcessingException
+   *           if there are problems generating the JSON string.
+   */
+  public String toJson() throws JsonProcessingException {
+    return new ObjectMapper().writeValueAsString(this);
   }
 
   /**
