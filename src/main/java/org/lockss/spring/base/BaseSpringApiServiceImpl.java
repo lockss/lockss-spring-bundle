@@ -29,7 +29,7 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
  */
-package org.lockss.laaws.base;
+package org.lockss.spring.base;
 
 import org.lockss.app.LockssDaemon;
 import org.lockss.config.ConfigManager;
