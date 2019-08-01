@@ -31,10 +31,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 package org.lockss.spring.base;
 
+import java.util.Map;
+import javax.jms.*;
+import org.lockss.jms.*;
+import org.lockss.util.jms.*;
+
 import org.lockss.app.LockssDaemon;
 import org.lockss.config.ConfigManager;
 import org.lockss.log.L4JLogger;
-import org.lockss.util.*;
+import org.lockss.util.StringUtil;
+import org.lockss.util.ClassUtil;
+import org.lockss.util.time.*;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
@@ -50,13 +57,13 @@ public class BaseSpringApiServiceImpl {
    * ready before returning a 503 Unavailable response.  Can only be set in
    * a Spring config file. */
   public static String PARAM_READY_WAIT_TIME = "org.lockss.service.readyWait";
-  public static long DEFAULT_READY_WAIT_TIME = Constants.MINUTE;
+  public static long DEFAULT_READY_WAIT_TIME = TimeUtil.MINUTE;
 
   /** Amount of time services will wait for the initial config load to
    * complete, before returning a 503 Unavailable response.  Can only be
    * set in a Spring config file. */
   public static String PARAM_CONFIG_WAIT_TIME = "org.lockss.service.configWait";
-  public static long DEFAULT_CONFIG_WAIT_TIME = Constants.MINUTE;
+  public static long DEFAULT_CONFIG_WAIT_TIME = TimeUtil.MINUTE;
 
 
   @Autowired
@@ -139,12 +146,159 @@ public class BaseSpringApiServiceImpl {
   }
 
   /**
-   * Return the LockssDaemon instance.
+   * Return the LockssDaemon instance, waiting a short time if necessary
+   * for it to be created
    *
-   * @return a ConfigManager with the configuration manager.
+   * @return the LockssDaemon instance
+   *
    */
   private LockssDaemon getLockssDaemon() {
     return LockssDaemon.getLockssDaemon();
+  }
+
+  // JMS Producer and Consumer setup
+
+  public int JMS_SEND = 1;
+  public int JMS_RECEIVE = 2;
+  public int JMS_BOTH = JMS_SEND | JMS_RECEIVE;
+
+  protected JmsConsumer jmsConsumer;
+  protected JmsProducer jmsProducer;
+
+  protected JMSManager getJMSManager() {
+    return getLockssDaemon().getManagerByType(JMSManager.class);
+  }
+
+  protected String getClassName() {
+    return ClassUtil.getClassNameWithoutPackage(getClass());
+  }
+
+  protected LockssDaemon getRunningLockssDaemon() {
+    LockssDaemon daemon = null;
+    while (daemon == null) {
+      try {
+	daemon = LockssDaemon.getLockssDaemon();
+      } catch (java.lang.IllegalStateException e) {
+	log.warn("getLockssDaemon() timed out");
+      }
+    }
+    try {
+      while (!daemon.waitUntilAppRunning(Deadline.in(5 * 60 * 1000)));
+      return daemon;
+    } catch (IllegalArgumentException e) {
+      log.warn("Couldn't get JmsManager", e);
+    } catch (InterruptedException e) {
+      // exit
+    }
+    return null;
+  }
+
+
+  protected void setUpJms(int which,
+			  String clientId,
+			  String topicName) {
+    setUpJms(which, clientId, topicName, false, null);
+  }
+
+  protected void setUpJms(int which,
+			  String clientId,
+			  String topicName,
+			  MessageListener listener) {
+    setUpJms(which, clientId, topicName, false, listener);
+  }
+
+  protected void setUpJms(int which,
+			  String clientId,
+			  String topicName,
+			  boolean noLocal,
+			  MessageListener listener) {
+    new Thread(new Runnable() {
+	@Override
+	public void run() {
+	  LockssDaemon daemon = getRunningLockssDaemon();
+	  JMSManager mgr = daemon.getManagerByType(JMSManager.class);
+	  JmsFactory fact = mgr.getJmsFactory();
+	  if ((which & JMS_RECEIVE) != 0) {
+	  log.info("Creating JMS consumer);
+	    while (jmsConsumer == null) {
+	      try {
+		log.trace("Attempting to create JMS consumer");
+		jmsConsumer = fact.createTopicConsumer(clientId, topicName,
+						       noLocal, listener);
+		log.info("Created JMS consumer: {}", topicName);
+		break;
+	      } catch (JMSException | NullPointerException exc) {
+		log.trace("Could not establish JMS connection; sleeping and retrying");
+	      }
+	      TimerUtil.guaranteedSleep(1 * TimeUtil.SECOND);
+	    }
+	  }
+	  if ((which & JMS_SEND) != 0) {
+	  log.info("Creating JMS producer);
+	    while (jmsProducer == null) {
+	      try {
+		log.trace("Attempting to create JMS producer");
+		jmsProducer = fact.createTopicProducer(clientId, topicName);
+		log.info("Created JMS producer: {}", topicName);
+		break;
+	      } catch (JMSException | NullPointerException exc) {
+		log.trace("Could not establish JMS connection; sleeping and retrying");
+	      }
+	      TimerUtil.guaranteedSleep(1 * TimeUtil.SECOND);
+	    }
+	  }
+	}
+      }).start();
+  }
+
+
+  /** Cleanly stop the JMS producer and/or consumer */
+  protected void stopJms() {
+    JmsProducer p = jmsProducer;
+    if (p != null) {
+      try {
+	jmsProducer = null;
+	p.close();
+      } catch (JMSException e) {
+	log.error("Couldn't stop jms producer for " + getClassName(), e);
+      }
+    }
+    JmsConsumer c = jmsConsumer;
+    if (c != null) {
+      try {
+	jmsConsumer = null;
+	c.close();
+      } catch (JMSException e) {
+	log.error("Couldn't stop jms consumer for " + getClassName(), e);
+      }
+    }
+  }
+
+  /** Subclasses should override to handle recieved Map messages */
+  protected void receiveMessage(Map map) {
+  }
+
+  /** A MessageListener suitable for receiving messages whose payload is a
+   * map.  Dispatches received messages to {@link #receiveMessage(Map)} */
+  public class MapMessageListener extends JmsConsumerImpl.SubscriptionListener {
+
+    public MapMessageListener(String listenerName) {
+      super(listenerName);
+    }
+
+    @Override
+    public void onMessage(Message message) {
+      try {
+        Object msgObject =  JmsUtil.convertMessage(message);
+	if (msgObject instanceof Map) {
+	  receiveMessage((Map)msgObject);
+	} else {
+	  log.warn("Unknown notification type, not Map: " + msgObject);
+	}
+      } catch (JMSException e) {
+	log.warn("Failed to decode message: {}", message, e);
+      }
+    }
   }
 
 }
