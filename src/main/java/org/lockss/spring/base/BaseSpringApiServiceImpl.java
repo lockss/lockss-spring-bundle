@@ -219,7 +219,7 @@ public class BaseSpringApiServiceImpl {
 	  JMSManager mgr = daemon.getManagerByType(JMSManager.class);
 	  JmsFactory fact = mgr.getJmsFactory();
 	  if ((which & JMS_RECEIVE) != 0) {
-	  log.info("Creating JMS consumer);
+	  log.info("Creating JMS consumer");
 	    while (jmsConsumer == null) {
 	      try {
 		log.trace("Attempting to create JMS consumer");
@@ -234,7 +234,7 @@ public class BaseSpringApiServiceImpl {
 	    }
 	  }
 	  if ((which & JMS_SEND) != 0) {
-	  log.info("Creating JMS producer);
+	  log.info("Creating JMS producer");
 	    while (jmsProducer == null) {
 	      try {
 		log.trace("Attempting to create JMS producer");
