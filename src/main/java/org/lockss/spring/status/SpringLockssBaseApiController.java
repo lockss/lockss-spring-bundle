@@ -37,6 +37,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.lockss.app.*;
+import org.lockss.util.time.*;
 
 /**
  * LOCKSS base controller for Spring REST web services.
@@ -77,4 +79,11 @@ public abstract class SpringLockssBaseApiController
    */
   @Override
   public abstract ApiStatus getApiStatus();
+
+  protected ApiStatus getDefaultApiStatus() {
+    LockssApp app = LockssApp.getLockssApp();
+    return new ApiStatus("swagger/swagger.yaml")
+      .setReady(app.isAppRunning())
+      .setReadyTime(app.getReadyTime());
+  }
 }
