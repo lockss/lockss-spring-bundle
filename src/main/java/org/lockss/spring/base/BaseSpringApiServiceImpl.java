@@ -193,13 +193,27 @@ public class BaseSpringApiServiceImpl {
     return null;
   }
 
-
+  /** Set up JMS producer and/or consumer.
+   * @param which one of JMS_SEND, JMS_RECEIVE, JMS_BOTH to set up
+   * producer, consumer, or both.  To perform an action when the setup is
+   * complete, override jmsSetUpDone()
+   * @param clientId
+   * @param topicName
+   */
   protected void setUpJms(int which,
 			  String clientId,
 			  String topicName) {
     setUpJms(which, clientId, topicName, false, null);
   }
 
+  /** Set up JMS producer and/or consumer.
+   * @param which one of JMS_SEND, JMS_RECEIVE, JMS_BOTH to set up
+   * producer, consumer, or both.  To perform an action when the setup is
+   * complete, override jmsSetUpDone()
+   * @param clientId
+   * @param topicName
+   * @param listener
+   */
   protected void setUpJms(int which,
 			  String clientId,
 			  String topicName,
@@ -207,6 +221,15 @@ public class BaseSpringApiServiceImpl {
     setUpJms(which, clientId, topicName, false, listener);
   }
 
+  /** Set up JMS producer and/or consumer.
+   * @param which one of JMS_SEND, JMS_RECEIVE, JMS_BOTH to set up
+   * producer, consumer, or both.  To perform an action when the setup is
+   * complete, override jmsSetUpDone()
+   * @param clientId
+   * @param topicName
+   * @param noLocal
+   * @param listener
+   */
   protected void setUpJms(int which,
 			  String clientId,
 			  String topicName,
@@ -247,10 +270,15 @@ public class BaseSpringApiServiceImpl {
 	      TimerUtil.guaranteedSleep(1 * TimeUtil.SECOND);
 	    }
 	  }
+	  jmsSetUpDone();
 	}
       }).start();
   }
 
+  /** To perform actions when the JMS connection is established, override
+   * this method. */
+  protected void jmsSetUpDone() {
+  }
 
   /** Cleanly stop the JMS producer and/or consumer */
   protected void stopJms() {
