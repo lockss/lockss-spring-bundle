@@ -81,9 +81,10 @@ public abstract class SpringLockssBaseApiController
   public abstract ApiStatus getApiStatus();
 
   protected ApiStatus getDefaultApiStatus() {
-    LockssApp app = LockssApp.getLockssApp();
+    LockssDaemon daemon = LockssDaemon.getLockssDaemon();
     return new ApiStatus("swagger/swagger.yaml")
-      .setReady(app.isAppRunning())
-      .setReadyTime(app.getReadyTime());
+      .setReady(daemon.isAppRunning())
+      .setReadyTime(daemon.getReadyTime())
+      .setPluginsReady(daemon.areLoadablePluginsReady());
   }
 }
