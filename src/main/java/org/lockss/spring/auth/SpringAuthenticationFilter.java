@@ -44,12 +44,18 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.lockss.account.UserAccount;
 import org.lockss.app.LockssDaemon;
+import org.lockss.config.ConfigManager;
 import org.lockss.log.L4JLogger;
+import org.lockss.util.time.*;
+import org.lockss.util.StringUtil;
+import org.springframework.core.env.Environment;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.GenericFilterBean;
+import org.springframework.web.context.*;
+import org.springframework.web.context.support.WebApplicationContextUtils;
 
 /**
  * Default LOCKSS custom Spring authentication filter.
@@ -63,6 +69,9 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
       "Bad userid/password credentials.";
   private static final String noUser = "User not found.";
   private final static L4JLogger log = L4JLogger.getLogger();
+
+  private Environment env;		// Spring Environment, access to
+					// config props
 
   /**
    * Authentication filter.
@@ -172,6 +181,14 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
 
     log.trace("credentials[0] = {}", credentials[0]);
 
+    // Wait until startup has progressed to the point where AccountManager
+    // should be available.
+    if (!waitReady()) {
+      httpResponse.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE,
+			     "Not Ready");
+      return;
+    }
+
     // No: Get the user account.
     UserAccount userAccount = null;
 
@@ -183,6 +200,9 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
       log.error("credentials[1] = {}", credentials[1]);
       log.error("LockssDaemon.getLockssDaemon().getAccountManager()."
           + "getUser(credentials[0])", e);
+      httpResponse.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+			     "AccountManager not available");
+      return;
     }
 
     // Check whether no user was found.
@@ -304,4 +324,123 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
   public RequestUriAuthenticationBypass getRequestUriAuthenticationBypass() {
     return new RequestUriAuthenticationBypassImpl();
   }
+
+  /** Return the Spring Environment
+   * @Param request the ServletRequest
+   */
+  Environment getEnvironment(ServletRequest request) {
+    if (env == null) {
+      javax.servlet.ServletContext sc = request.getServletContext();
+      WebApplicationContext wac =
+	WebApplicationContextUtils.getWebApplicationContext(sc);
+      env = wac.getEnvironment();
+    }
+    return env;
+  }
+
+  // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  // The waitReady() mechanism from BaseSpringApiServiceImpl is
+  // replicated here for expedience, should be moved somewhere independent
+  // of auth.
+  // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+  /** Amount of time services will wait for the underlying daemon to become
+   * ready before returning a 503 Unavailable response.  Can only be set in
+   * a Spring config file. */
+  public static String PARAM_READY_WAIT_TIME = "org.lockss.service.readyWait";
+  public static long DEFAULT_READY_WAIT_TIME = TimeUtil.MINUTE;
+
+  /** Amount of time services will wait for the initial config load to
+   * complete, before returning a 503 Unavailable response.  Can only be
+   * set in a Spring config file. */
+  public static String PARAM_CONFIG_WAIT_TIME = "org.lockss.service.configWait";
+  public static long DEFAULT_CONFIG_WAIT_TIME = TimeUtil.MINUTE;
+
+
+  protected long getReadyWaitTime() {
+    return getWaitTime(getEnvironment().getProperty(PARAM_READY_WAIT_TIME),
+		       DEFAULT_READY_WAIT_TIME);
+  }
+
+  protected long getConfigWaitTime() {
+    return getWaitTime(getEnvironment().getProperty(PARAM_CONFIG_WAIT_TIME),
+		       DEFAULT_CONFIG_WAIT_TIME);
+  }
+
+  protected long getWaitTime(String paramVal, long dfault) {
+    if (!StringUtil.isNullString(paramVal)) {
+      try {
+	return Long.parseLong(paramVal);
+      } catch (NumberFormatException e) {
+	log.warn("Can't parse wait time", e);
+      }
+    }
+    return dfault;
+  }
+
+  /** Wait for the daemon to fully start, return true when it has.  Wait
+   * time is set by the application property {@value PARAM_READY_WAIT_TIME}
+   * (default {@value DEFAULT_READY_WAIT_TIME}), in milliseconds.  Most
+   * service API handlers should wait for this before servicing an incoming
+   * request.  Return false if the daemon doesn't start within the allotted
+   * time, in which case the service should return an error. */
+  protected boolean waitReady() {
+    return waitReady(getReadyWaitTime());
+  }
+
+  /** Wait up to the specified time for the daemon to fully start, return
+   * true when it has.  Most service API handlers should wait for this
+   * before servicing an incoming request.  Return false if the daemon
+   * doesn't start within the allotted time, in which case the service
+   * should return an error. */
+  protected boolean waitReady(long wait) {
+    try {
+      return getLockssDaemon().waitUntilAppRunning(Deadline.in(wait));
+    } catch (InterruptedException e) {
+      return false;
+    }
+  }
+
+  /** Wait for the first config load to complete, return true when it has.
+   * Wait time is set by the application property {@value
+   * PARAM_CONFIG_WAIT_TIME} (default {@value DEFAULT_CONFIG_WAIT_TIME}),
+   * in milliseconds.  Service API handlers that require the config to be
+   * loaded but which can perform their function before the daemon is
+   * ready should wait for this before servicing an incoming request.
+   * Return false if the config load hasn't completed within the allotted
+   * time, in which case the service should return an error. */
+  protected boolean waitConfig() {
+    return waitConfig(getConfigWaitTime());
+  }
+
+  /** Wait up to the specified time for the first config load to complete,
+   * return true when it has.  Service API handlers that require the config
+   * to be loaded but which can perform their function before the daemon is
+   * ready should wait for this before servicing an incoming request.
+   * Return false if the config load hasn't completed within the allotted
+   * time, in which case the service should return an error. */
+  protected boolean waitConfig(long wait) {
+    return getConfigManager().waitConfig(Deadline.in(wait));
+  }
+
+  /**
+   * Return the configuration manager.
+   *
+   * @return a ConfigManager with the configuration manager.
+   */
+  private ConfigManager getConfigManager() {
+    return ConfigManager.getConfigManager();
+  }
+
+  /**
+   * Return the LockssDaemon instance, waiting a short time if necessary
+   * for it to be created
+   *
+   * @return the LockssDaemon instance
+   *
+   */
+  private LockssDaemon getLockssDaemon() {
+    return LockssDaemon.getLockssDaemon();
+  }
+
 }
