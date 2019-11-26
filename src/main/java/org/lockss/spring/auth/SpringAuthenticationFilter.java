@@ -146,9 +146,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
       // Yes: Report the problem.
       log.info(noAuthorizationHeader);
 
-      SecurityContextHolder.clearContext();
-      httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED,
-          noAuthorizationHeader);
+      sendUnauthenticated(httpResponse, noAuthorizationHeader);
       return;
     }
 
@@ -161,9 +159,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
       // Yes: Report the problem.
       log.info(noCredentials);
 
-      SecurityContextHolder.clearContext();
-      httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED,
-          noCredentials);
+      sendUnauthenticated(httpResponse, noCredentials);
       return;
     }
 
@@ -173,9 +169,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
       log.info(badCredentials);
       log.info("bad credentials = " + Arrays.toString(credentials));
 
-      SecurityContextHolder.clearContext();
-      httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED,
-          badCredentials);
+      sendUnauthenticated(httpResponse, badCredentials);
       return;
     }
 
@@ -210,9 +204,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
       // Yes: Report the problem.
       log.info(noUser);
 
-      SecurityContextHolder.clearContext();
-      httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED,
-          badCredentials);
+      sendUnauthenticated(httpResponse, badCredentials);
       return;
     }
 
@@ -229,9 +221,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
       log.info("userAccount.getName() = {}", userAccount.getName());
       log.info("bad credentials = {}", Arrays.toString(credentials));
 
-      SecurityContextHolder.clearContext();
-      httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED,
-          badCredentials);
+      sendUnauthenticated(httpResponse, badCredentials);
       return;
     }
 
@@ -259,6 +249,14 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
     chain.doFilter(request, response);
 
     log.debug2("Done.");
+  }
+
+  private void sendUnauthenticated(HttpServletResponse httpResponse,
+				   String msg)
+      throws IOException {
+    SecurityContextHolder.clearContext();
+    httpResponse.setHeader("WWW-Authenticate", "Basic");
+    httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED, msg);
   }
 
   /**
