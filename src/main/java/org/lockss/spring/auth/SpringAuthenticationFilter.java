@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2000-2019 Board of Trustees of Leland Stanford Jr. University,
+Copyright (c) 2000-2020 Board of Trustees of Leland Stanford Jr. University,
 all rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -151,8 +151,8 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
     }
 
     // No: Get the user credentials in the authorization header.
-    String[] credentials =
-        AuthUtil.decodeBasicAuthorizationHeader(authorizationHeader);
+    String[] credentials = org.lockss.util.auth.AuthUtil
+	.decodeBasicAuthorizationHeader(authorizationHeader);
 
     // Check whether no credentials were found.
     if (credentials == null) {

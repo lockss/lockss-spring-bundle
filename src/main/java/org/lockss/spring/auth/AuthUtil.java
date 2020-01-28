@@ -1,6 +1,6 @@
 /*
 
- Copyright (c) 2017-2019 Board of Trustees of Leland Stanford Jr. University,
+ Copyright (c) 2017-2020 Board of Trustees of Leland Stanford Jr. University,
  all rights reserved.
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -29,7 +29,6 @@ package org.lockss.spring.auth;
 
 import java.security.AccessControlException;
 import java.util.Arrays;
-import java.util.Base64;
 import org.lockss.account.UserAccount;
 import org.lockss.app.LockssDaemon;
 import org.lockss.config.Configuration;
@@ -55,32 +54,6 @@ public class AuthUtil {
       "Invalid Authentication Type (must be BASIC or NONE).";
 
   private static final L4JLogger log = L4JLogger.getLogger();
-
-  /**
-   * Decodes the basic authorization header.
-   *
-   * @param header A String with the Authorization header.
-   * @return a String[] with the user name and the password.
-   */
-  public static String[] decodeBasicAuthorizationHeader(String header) {
-    log.debug2("header = {}", header);
-
-    // Get the header meaningful bytes.
-    byte[] decodedBytes =
-        Base64.getDecoder().decode(header.replaceFirst("[B|b]asic ", ""));
-
-    // Check whether nothing was decoded.
-    if (decodedBytes == null || decodedBytes.length == 0) {
-      // Yes: Done.
-      return null;
-    }
-
-    // No: Extract the individual credential items, the user name and the
-    // password.
-    String[] result = new String(decodedBytes).split(":", 2);
-    log.debug2("result = [{}, ****]", result[0]);
-    return result;
-  }
 
   /**
    * Checks whether the user has the role required to fulfill a set of roles.
