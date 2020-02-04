@@ -243,7 +243,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
 
     // Provide the completed authentication details.
     SecurityContextHolder.getContext().setAuthentication(authentication);
-    log.debug("User successfully authenticated");
+    log.debug2("User successfully authenticated");
 
     // Continue the chain.
     chain.doFilter(request, response);
