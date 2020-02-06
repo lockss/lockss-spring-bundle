@@ -31,12 +31,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package org.lockss.spring.status;
 
-import org.lockss.laaws.status.model.ApiStatus;
+import org.lockss.util.rest.status.ApiStatus;
 import org.lockss.log.L4JLogger;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.lockss.app.*;
+import org.lockss.util.time.*;
 
 /**
  * LOCKSS base controller for Spring REST web services.
@@ -77,4 +79,12 @@ public abstract class SpringLockssBaseApiController
    */
   @Override
   public abstract ApiStatus getApiStatus();
+
+  protected ApiStatus getDefaultApiStatus() {
+    LockssDaemon daemon = LockssDaemon.getLockssDaemon();
+    return new ApiStatus("swagger/swagger.yaml")
+      .setReady(daemon.isAppRunning())
+      .setReadyTime(daemon.getReadyTime())
+      .setPluginsReady(daemon.areLoadablePluginsReady());
+  }
 }
