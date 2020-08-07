@@ -31,16 +31,28 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package org.lockss.spring.base;
 
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.ContentNegotiationConfigurer;
 import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
 import org.springframework.web.util.UrlPathHelper;
+import org.lockss.log.L4JLogger;
 
 /**
  * Base class for a Spring-Boot application.
  */
 public abstract class BaseSpringBootApplication {
+
+  private static L4JLogger log = L4JLogger.getLogger();
+
+  @org.springframework.beans.factory.annotation.Autowired
+  private ApplicationContext appCtx;
+
+  /** make ApplicationContext available to subclasses */
+  protected ApplicationContext getApplicationContext() {
+    return appCtx;
+  }
 
   /**
    * Sets configuration options common to all the LOCKSS Spring Boot

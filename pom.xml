@@ -51,6 +51,10 @@ POSSIBILITY OF SUCH DAMAGE.
   <name>lockss-spring-bundle</name>
   <description>POM bundle and classes for LOCKSS projects using Spring Boot</description>
 
+  <properties>
+    <build.java.jarTests.skip>false</build.java.jarTests.skip>
+  </properties>
+
   <dependencies>
 
     <dependency>

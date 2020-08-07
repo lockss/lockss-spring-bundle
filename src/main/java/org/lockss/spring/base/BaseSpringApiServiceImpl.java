@@ -37,7 +37,7 @@ import org.lockss.jms.*;
 import org.lockss.util.jms.*;
 
 import org.lockss.app.LockssDaemon;
-import org.lockss.config.ConfigManager;
+import org.lockss.config.*;
 import org.lockss.log.L4JLogger;
 import org.lockss.util.StringUtil;
 import org.lockss.util.ClassUtil;
@@ -191,6 +191,37 @@ public class BaseSpringApiServiceImpl {
       // exit
     }
     return null;
+  }
+
+  /** If this service is a LockssConfigurableService, register its config
+   * callback when ConfigManager is created. */
+  @org.springframework.context.event.EventListener
+  public void configMgrCreated(ConfigManager.ConfigManagerCreatedEvent event) {
+    if (this instanceof LockssConfigurableService) {
+      registerConfigCallback((LockssConfigurableService)this);
+    }
+  }
+
+  protected void registerConfigCallback(LockssConfigurableService csvc) {
+    configCallback = new ServiceImplConfigCallback(csvc);
+    log.debug2("Registering config callback: {}", configCallback);
+    getConfigManager().registerConfigurationCallback(configCallback);
+  }
+
+  Configuration.Callback configCallback;
+
+  private class ServiceImplConfigCallback implements Configuration.Callback {
+    private LockssConfigurableService csvc;
+
+    private ServiceImplConfigCallback(LockssConfigurableService csvc) {
+      this.csvc = csvc;
+    }
+
+    public void configurationChanged(Configuration newConfig,
+				     Configuration prevConfig,
+				     Configuration.Differences changedKeys) {
+      csvc.setConfig(newConfig, prevConfig, changedKeys);
+    }
   }
 
   /** Set up JMS producer and/or consumer.
