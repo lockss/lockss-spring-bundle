@@ -32,8 +32,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package org.lockss.spring.auth;
 
 import org.lockss.log.L4JLogger;
+import org.lockss.app.LockssDaemon;
+import org.lockss.config.ConfigManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
@@ -52,6 +56,26 @@ import org.springframework.security.web.firewall.HttpFirewall;
 public class SpringSecurityConfigurer extends WebSecurityConfigurerAdapter {
 
   private final static L4JLogger log = L4JLogger.getLogger();
+
+  private LockssDaemon daemon;
+  private SpringAuthenticationFilter authFilter;
+
+  // Register config callback
+  @EventListener
+  public void configMgrCreated(ConfigManager.ConfigManagerCreatedEvent event) {
+    log.debug2("ConfigManagerCreatedEvent triggered");
+    ConfigManager.getConfigManager().registerConfigurationCallback(new ConfigCallback());
+  }
+
+  private class ConfigCallback
+    implements org.lockss.config.Configuration.Callback {
+    public void configurationChanged(org.lockss.config.Configuration newConfig,
+				     org.lockss.config.Configuration oldConfig,
+				     org.lockss.config.Configuration.Differences changedKeys) {
+      log.debug2("configurationChanged: {}", newConfig);
+      authFilter.setConfig(newConfig, oldConfig, changedKeys);
+    }
+  }
 
   /**
    * Allows through encoded slashes in URLs.
@@ -83,8 +107,10 @@ public class SpringSecurityConfigurer extends WebSecurityConfigurerAdapter {
     // Force each and every request to be authenticated.
     http.csrf().disable().authorizeRequests().anyRequest().authenticated();
 
+    log.debug2("Installing auth filter");
     // The Basic authentication filter to be used.
-    http.addFilterBefore(new SpringAuthenticationFilter(),
+    authFilter = new SpringAuthenticationFilter();
+    http.addFilterBefore(authFilter,
         BasicAuthenticationFilter.class);
     log.debug2("Done.");
   }

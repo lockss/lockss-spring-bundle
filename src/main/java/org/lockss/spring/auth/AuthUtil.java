@@ -28,70 +28,53 @@
 package org.lockss.spring.auth;
 
 import java.security.AccessControlException;
-import java.util.Arrays;
-import org.lockss.account.UserAccount;
-import org.lockss.app.LockssDaemon;
-import org.lockss.config.Configuration;
-import org.lockss.config.CurrentConfig;
+import java.util.*;
 import org.lockss.log.L4JLogger;
+import org.springframework.security.core.*;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 /**
  * Authentication and authorization utility code.
  */
 public class AuthUtil {
 
-  private static final String BASIC_AUTH_TYPE = "basic";
-  private static final String NONE_AUTH_TYPE = "none";
+  private static final L4JLogger log = L4JLogger.getLogger();
 
   /**
-   * Prefix for configuration properties.
+   * Called by service impls to check whether the currently authenticated
+   * user has the necessary roles for a specific request
+   *
+   * @param permissibleRoles A String... with the roles permissible for the
+   * user to be able to execute an operation.
+   * @return true if the user has any roles that fulfill the permissible
+   * roles
    */
-  private static final String PREFIX = Configuration.PREFIX + "restAuth.";
-  private static final String PARAM_AUTH_TYPE = PREFIX + "authenticationType";
-  private static final String DEFAULT_AUTH_TYPE = NONE_AUTH_TYPE;
-
-  private static final String invalidAutheticationType =
-      "Invalid Authentication Type (must be BASIC or NONE).";
-
-  private static final L4JLogger log = L4JLogger.getLogger();
+  public static void checkHasRole(String... permissibleRoles) {
+    AuthUtil.checkHasRole(SecurityContextHolder.getContext().getAuthentication(),
+			  permissibleRoles);
+  }
 
   /**
    * Checks whether the user has the role required to fulfill a set of roles.
    * Throws AccessControlException if the check fails.
    *
    * @param userName A String with the user name.
-   * @param permissibleRoles A String... with the roles permissible for the user to be able to
-   * execute an operation.
+   * @param permissibleRoles A String... with the roles permissible for the
+   * user to be able to execute an operation.
    */
-  public static void checkAuthorization(String userName,
-      String... permissibleRoles) {
+  public static void checkHasRole(Authentication authToken,
+				  String... permissibleRoles) {
+    String userName = authToken.getName();
+    Collection<String> userRoles = new ArrayList<>();
+    for (GrantedAuthority auth : authToken.getAuthorities()) {
+      userRoles.add(auth.getAuthority());
+    }
     log.debug2("userName = {}", userName);
+    log.debug2("userRoles = {}", userRoles);
     log.debug2("permissibleRoles = {}", Arrays.toString(permissibleRoles));
 
-    // Check whether authentication is not required at all.
-    if (!AuthUtil.isAuthenticationOn()) {
-      // Yes: Continue normally.
-      log.debug2("Authorized (like everybody else).");
-      return;
-    }
-
-    // Get the user account.
-    UserAccount userAccount = null;
-
-    try {
-      userAccount =
-          LockssDaemon.getLockssDaemon().getAccountManager().getUser(userName);
-      log.trace("userAccount.getRoleSet() = {}", userAccount.getRoleSet());
-    } catch (Exception e) {
-      log.error("userName = {}", userName);
-      log.error("LockssDaemon.getLockssDaemon().getAccountManager()."
-          + "getUser(" + userName + ")", e);
-      throw new AccessControlException("Unable to get user '" + userName + "'");
-    }
-
     // An administrator is always authorized.
-    if (userAccount.isUserInRole(org.lockss.spring.auth.Roles.ROLE_USER_ADMIN))
-    {
+    if (userRoles.contains(Roles.ROLE_ALL_ACCESS)) {
       log.debug2("Authorized as administrator.");
       return;
     }
@@ -109,13 +92,13 @@ public class AuthUtil {
       log.trace("permissibleRole = {}", permissibleRole);
 
       // If any role is permitted, this user is authorized.
-      if (org.lockss.spring.auth.Roles.ROLE_ANY.equals(permissibleRole)) {
+      if (Roles.ROLE_ANY.equals(permissibleRole)) {
 	log.debug2("Authorized like everybody else.");
         return;
       }
 
       // The user is authorized if it has this permissible role.
-      if (userAccount.isUserInRole(permissibleRole)) {
+      if (userRoles.contains(permissibleRole)) {
 	log.debug2("Authorized because user is in role.");
         return;
       }
@@ -129,39 +112,4 @@ public class AuthUtil {
     throw new AccessControlException(message);
   }
 
-  /**
-   * Provides an indication of whether authentication is required. Throws
-   * AccessControlException if the the specified authentication method is not
-   * valid.
-   *
-   * @return a boolean with <code>true</code> if authentication is required,
-   * <code>false</code> otherwise.
-   */
-  public static boolean isAuthenticationOn() {
-    log.debug2("Invoked.");
-
-    // Get the configured authentication type.
-    String authenticationType =
-        CurrentConfig.getParam(PARAM_AUTH_TYPE, DEFAULT_AUTH_TYPE);
-    log.trace("authenticationType = {}", authenticationType);
-
-    // Check whether access is allowed to anybody.
-    if (NONE_AUTH_TYPE.equalsIgnoreCase(authenticationType)) {
-      // Yes.
-      log.debug2("Authentication is OFF.");
-      return false;
-      // No: Check whether the authentication type is not "basic".
-    } else if (!BASIC_AUTH_TYPE.equalsIgnoreCase(authenticationType)) {
-      // Yes: Report the problem.
-      log.error(invalidAutheticationType);
-      log.error("authenticationType = {}", authenticationType);
-
-      throw new AccessControlException(authenticationType + ": "
-          + invalidAutheticationType);
-    }
-
-    // No.
-    log.debug2("Authentication is ON.");
-    return true;
-  }
 }

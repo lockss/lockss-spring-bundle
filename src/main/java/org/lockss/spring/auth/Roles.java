@@ -1,6 +1,6 @@
 /*
 
- Copyright (c) 2016 Board of Trustees of Leland Stanford Jr. University,
+ Copyright (c) 2016 - 2020 Board of Trustees of Leland Stanford Jr. University,
  all rights reserved.
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -26,6 +26,7 @@
 
  */
 package org.lockss.spring.auth;
+import org.lockss.servlet.LockssServlet;
 
 /**
  * The authorization roles.
@@ -33,26 +34,34 @@ package org.lockss.spring.auth;
 public class Roles {
 
   /**
-   * Least restrictive role.
+   * User may configure admin access (add/delete/modify users, set admin
+   * access list)
    */
-  public static final String ROLE_USER_ADMIN = "userAdminRole";
+  public static final String ROLE_USER_ADMIN = LockssServlet.ROLE_USER_ADMIN;
+
+  /**
+   * Maximum capabilities role.
+   */
+  public static final String ROLE_ALL_ACCESS = ROLE_USER_ADMIN;
 
   /**
    * User may configure content access (set content access list).
    */
-  public static final String ROLE_CONTENT_ADMIN = "contentAdminRole";
+  public static final String ROLE_CONTENT_ADMIN =
+    LockssServlet.ROLE_CONTENT_ADMIN;
 
   /**
    * User may change AU configuration (add/delete content).
    */
-  public static final String ROLE_AU_ADMIN = "auAdminRole";
+  public static final String ROLE_AU_ADMIN = LockssServlet.ROLE_AU_ADMIN;
 
   /**
-   * User may access content).
+   * User may access content.
    */
-  public static final String ROLE_CONTENT_ACCESS = "accessContentRole";
+  public static final String ROLE_CONTENT_ACCESS =
+    LockssServlet.ROLE_CONTENT_ACCESS;
 
-  public static final String ROLE_DEBUG = "debugRole";
+  public static final String ROLE_DEBUG = LockssServlet.ROLE_DEBUG;
 
   /**
    * Minimum role of any authenticated user.
