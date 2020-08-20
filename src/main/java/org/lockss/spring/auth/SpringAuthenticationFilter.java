@@ -210,8 +210,8 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
 	  return;
 	}
       } catch (Exception e) {
-      log.warn("Error checking IP", e);
-      httpResponse.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+	log.warn("Error checking IP", e);
+	httpResponse.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 //       httpResponse.setHandled(true);
       }
     } else {
