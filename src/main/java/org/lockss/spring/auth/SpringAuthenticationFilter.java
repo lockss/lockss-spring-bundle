@@ -33,20 +33,20 @@ package org.lockss.spring.auth;
 
 import java.io.IOException;
 import java.security.AccessControlException;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
+import java.util.*;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.apache.commons.lang3.StringUtils;
 import org.lockss.account.*;
 import org.lockss.app.LockssDaemon;
 import org.lockss.config.*;
 import org.lockss.log.L4JLogger;
 import org.lockss.util.time.*;
+import org.lockss.util.ListUtil;
 import org.lockss.util.StringUtil;
 import org.lockss.util.IpFilter;
 import org.springframework.core.env.Environment;
@@ -104,8 +104,8 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
     "logForbidden";
   public static final boolean DEFAULT_LOG_FORBIDDEN = true;
 
-  private static String LOCAL_IP_FILTERS = "127.0.0.0/8;::1";
-
+  private static List<String> LOCAL_IP_FILTERS = ListUtil.list("127.0.0.0/8",
+							       ";::1");
 
   private Environment env;		// Spring Environment, access to
 					// Spring config props
@@ -115,25 +115,28 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
   private boolean allowUnauthenticatedRead =
     DEFAULT_ALLOW_UNAUTHENTICATED_READ;;
   private boolean logForbidden = DEFAULT_LOG_FORBIDDEN;
-  private boolean allowLoopback = DEFAULT_ALLOW_LOOPBACK;
+  private boolean allowLocal = DEFAULT_ALLOW_LOOPBACK;
   private IpFilter ipFilter;
-  private IpFilter loopbackFilter = createLoopbackFilter();
+  private IpFilter localFilter;
+
+  public SpringAuthenticationFilter() {
+    createLocalFilter(Collections.emptyList());
+  }
 
   public void setConfig(Configuration newConfig, Configuration oldConfig,
 			Configuration.Differences changedKeys) {
     log.debug2("setConfig: {}, {}", this, newConfig);
-    if (changedKeys.contains(ACCESS_PREFIX)) {
-      authType = newConfig.get(PARAM_AUTH_TYPE, DEFAULT_AUTH_TYPE);
-      allowUnauthenticatedRead =
-	newConfig.getBoolean(PARAM_ALLOW_UNAUTHENTICATED_READ,
-			     DEFAULT_ALLOW_UNAUTHENTICATED_READ);
-      logForbidden = newConfig.getBoolean(PARAM_LOG_FORBIDDEN,
-					  DEFAULT_LOG_FORBIDDEN);
-      allowLoopback = newConfig.getBoolean(PARAM_ALLOW_LOOPBACK,
-					   DEFAULT_ALLOW_LOOPBACK);
-      setIpFilter(newConfig.get(PARAM_IP_INCLUDE),
-		  newConfig.get(PARAM_IP_EXCLUDE));
-    }
+    authType = newConfig.get(PARAM_AUTH_TYPE, DEFAULT_AUTH_TYPE);
+    allowUnauthenticatedRead =
+      newConfig.getBoolean(PARAM_ALLOW_UNAUTHENTICATED_READ,
+			   DEFAULT_ALLOW_UNAUTHENTICATED_READ);
+    logForbidden = newConfig.getBoolean(PARAM_LOG_FORBIDDEN,
+					DEFAULT_LOG_FORBIDDEN);
+    allowLocal = newConfig.getBoolean(PARAM_ALLOW_LOOPBACK,
+				      DEFAULT_ALLOW_LOOPBACK);
+    createLocalFilter(ConfigManager.getPlatformContainerSubnets());
+    setIpFilter(newConfig.get(PARAM_IP_INCLUDE),
+		newConfig.get(PARAM_IP_EXCLUDE));
     isConfigSet = true;
   }
 
@@ -149,14 +152,18 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
     }
   }
 
-  private IpFilter createLoopbackFilter() {
-    IpFilter filt = new IpFilter();
-    try {
-      filt.setFilters(LOCAL_IP_FILTERS, null);
-    } catch (IpFilter.MalformedException e) {
-      log.error("Failed to allow loopback addresses" , e);
+  private void createLocalFilter(List<String> containerSubnets) {
+    if (allowLocal && localFilter == null) {
+      IpFilter filt = new IpFilter();
+      try {
+	List<String> localSubnets = new ArrayList<>(LOCAL_IP_FILTERS);
+	localSubnets.addAll(containerSubnets);
+	filt.setFilters(localSubnets, null);
+      } catch (IpFilter.MalformedException e) {
+	log.error("Failed to allow local addresses" , e);
+      }
+      localFilter = filt;
     }
-    return filt;
   }
 
   /**
@@ -208,6 +215,19 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
 	  }
 	  sendForbidden(httpResponse, "Forbidden");
 	  return;
+	}
+	String forwardedFor = httpRequest.getHeader("X-Forwarded-For");
+	if (!StringUtils.isEmpty(forwardedFor)) {
+	  String mostRecentIp = lastElement(forwardedFor);
+	  if (!isIpAuthorized(mostRecentIp)) {
+	    // The IP is NOT allowed
+	    if (logForbidden) {
+	      log.info("Access to {} forbidden for request forwarded from {}",
+		       reqUri, mostRecentIp);
+	    }
+	    sendForbidden(httpResponse, "Forbidden");
+	    return;
+	  }
 	}
       } catch (Exception e) {
 	log.warn("Error checking IP", e);
@@ -346,6 +366,11 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
     log.debug2("Done.");
   }
 
+  String lastElement(String forwardedChain) {
+    String[] ips = forwardedChain.split(",");
+    return ips[ips.length-1].trim();
+  }
+
   /** Return true is the system is configured to require user authentication */
   boolean isAuthenticationOn() {
     switch (authType) {
@@ -360,7 +385,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
   /** Return true if the IP address is allowed by the IP access filters */
   boolean isIpAuthorized(String ip) throws IpFilter.MalformedException {
     return (ipFilter != null && ipFilter.isIpAllowed(ip) ||
-	    (allowLoopback && loopbackFilter.isIpAllowed(ip)));
+	    (allowLocal && localFilter.isIpAllowed(ip)));
   }
 
   /** Send 503 Serice Unavailable, with a reason */

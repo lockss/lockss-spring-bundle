@@ -101,6 +101,11 @@ public class TestSpringAuthenticationFilter extends SpringLockssTestCase4 {
     assertTrue(authFilter.isIpAuthorized("127.0.0.1"));
     assertFalse(authFilter.isIpAuthorized("1.2.3.4"));
 
+    ConfigurationUtil.addFromArgs(ConfigManager.PARAM_PLATFORM_CONTAINER_SUBNETS,
+				  "1.2.3.0/24");
+    assertTrue(authFilter.isIpAuthorized("127.0.0.1"));
+    assertFalse(authFilter.isIpAuthorized("1.2.3.4"));
+
     ConfigurationUtil.addFromArgs(SpringAuthenticationFilter.PARAM_ALLOW_LOOPBACK,
 				  "false");
     assertFalse(authFilter.isIpAuthorized("127.0.0.1"));
@@ -110,6 +115,13 @@ public class TestSpringAuthenticationFilter extends SpringLockssTestCase4 {
 				  "1.2.3.0/24;4.3.2.1");
     assertFalse(authFilter.isIpAuthorized("127.0.0.1"));
     assertTrue(authFilter.isIpAuthorized("1.2.3.4"));
+  }
+
+  @Test
+  public void testLastElement() throws Exception {
+    assertEquals("1.2.3.4", authFilter.lastElement("1.2.3.4"));
+    assertEquals("1.2.3.4", authFilter.lastElement(" 1.2.3.4 "));
+    assertEquals("1.2.3.4", authFilter.lastElement("2.2.2.2,1.2.3.4 "));
   }
 
 }
