@@ -105,7 +105,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
   public static final boolean DEFAULT_LOG_FORBIDDEN = true;
 
   private static List<String> LOCAL_IP_FILTERS = ListUtil.list("127.0.0.0/8",
-							       ";::1");
+							       "::1");
 
   private Environment env;		// Spring Environment, access to
 					// Spring config props
@@ -126,17 +126,21 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
   public void setConfig(Configuration newConfig, Configuration oldConfig,
 			Configuration.Differences changedKeys) {
     log.debug2("setConfig: {}, {}", this, newConfig);
-    authType = newConfig.get(PARAM_AUTH_TYPE, DEFAULT_AUTH_TYPE);
-    allowUnauthenticatedRead =
-      newConfig.getBoolean(PARAM_ALLOW_UNAUTHENTICATED_READ,
-			   DEFAULT_ALLOW_UNAUTHENTICATED_READ);
-    logForbidden = newConfig.getBoolean(PARAM_LOG_FORBIDDEN,
-					DEFAULT_LOG_FORBIDDEN);
-    allowLocal = newConfig.getBoolean(PARAM_ALLOW_LOOPBACK,
-				      DEFAULT_ALLOW_LOOPBACK);
-    createLocalFilter(ConfigManager.getPlatformContainerSubnets());
-    setIpFilter(newConfig.get(PARAM_IP_INCLUDE),
-		newConfig.get(PARAM_IP_EXCLUDE));
+    if (changedKeys.contains(AUTH_PREFIX) ||
+	changedKeys.contains(ACCESS_PREFIX) ||
+	changedKeys.contains(ConfigManager.PARAM_PLATFORM_CONTAINER_SUBNETS)) {
+      authType = newConfig.get(PARAM_AUTH_TYPE, DEFAULT_AUTH_TYPE);
+      allowUnauthenticatedRead =
+	newConfig.getBoolean(PARAM_ALLOW_UNAUTHENTICATED_READ,
+			     DEFAULT_ALLOW_UNAUTHENTICATED_READ);
+      logForbidden = newConfig.getBoolean(PARAM_LOG_FORBIDDEN,
+					  DEFAULT_LOG_FORBIDDEN);
+      allowLocal = newConfig.getBoolean(PARAM_ALLOW_LOOPBACK,
+					DEFAULT_ALLOW_LOOPBACK);
+      createLocalFilter(ConfigManager.getPlatformContainerSubnets());
+      setIpFilter(newConfig.get(PARAM_IP_INCLUDE),
+		  newConfig.get(PARAM_IP_EXCLUDE));
+    }
     isConfigSet = true;
   }
 
