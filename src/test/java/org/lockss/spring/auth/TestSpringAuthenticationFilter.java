@@ -102,19 +102,27 @@ public class TestSpringAuthenticationFilter extends SpringLockssTestCase4 {
     assertFalse(authFilter.isIpAuthorized("1.2.3.4"));
 
     ConfigurationUtil.addFromArgs(ConfigManager.PARAM_PLATFORM_CONTAINER_SUBNETS,
-				  "1.2.3.0/24");
+				  "44.55.66.0/24");
     assertTrue(authFilter.isIpAuthorized("127.0.0.1"));
-    assertFalse(authFilter.isIpAuthorized("1.2.3.4"));
+    assertTrue(authFilter.isIpAuthorized("44.55.66.77"));
 
     ConfigurationUtil.addFromArgs(SpringAuthenticationFilter.PARAM_ALLOW_LOOPBACK,
 				  "false");
     assertFalse(authFilter.isIpAuthorized("127.0.0.1"));
-    assertFalse(authFilter.isIpAuthorized("1.2.3.4"));
+    assertFalse(authFilter.isIpAuthorized("44.55.66.77"));
 
     ConfigurationUtil.addFromArgs(SpringAuthenticationFilter.PARAM_IP_INCLUDE,
 				  "1.2.3.0/24;4.3.2.1");
-    assertFalse(authFilter.isIpAuthorized("127.0.0.1"));
     assertTrue(authFilter.isIpAuthorized("1.2.3.4"));
+    assertFalse(authFilter.isIpAuthorized("127.0.0.1"));
+    assertFalse(authFilter.isIpAuthorized("44.55.66.77"));
+
+    ConfigurationUtil.addFromArgs(ConfigManager.PARAM_PLATFORM_CONTAINER_SUBNETS,
+				  "88.77.66.0/24",
+				  SpringAuthenticationFilter.PARAM_ALLOW_LOOPBACK,
+				  "true");
+    assertTrue(authFilter.isIpAuthorized("127.0.0.1"));
+    assertTrue(authFilter.isIpAuthorized("88.77.66.11"));
   }
 
   @Test
