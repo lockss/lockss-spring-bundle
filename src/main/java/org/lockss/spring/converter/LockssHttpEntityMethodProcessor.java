@@ -92,6 +92,8 @@ public class LockssHttpEntityMethodProcessor extends AbstractMessageConverterMet
 			ContentNegotiationManager manager) {
 
 		super(converters, manager);
+
+		this.contentNegotiationManager = manager;
 	}
 
 	/**
@@ -468,15 +470,19 @@ public class LockssHttpEntityMethodProcessor extends AbstractMessageConverterMet
 		List<MediaType> mediaTypes = new ArrayList<MediaType>(compatibleMediaTypes);
 		MediaType.sortBySpecificityAndQuality(mediaTypes);
 
-		MediaType selectedMediaType = null;
-		for (MediaType mediaType : mediaTypes) {
-			if (mediaType.isConcrete()) {
-				selectedMediaType = mediaType;
-				break;
-			}
-			else if (mediaType.equals(MediaType.ALL) || mediaType.equals(MEDIA_TYPE_APPLICATION)) {
-				selectedMediaType = MediaType.APPLICATION_OCTET_STREAM;
-				break;
+		// Get and use the Content-Type from the OutputMessage if set explicitly
+		MediaType selectedMediaType = outputMessage.getHeaders().getContentType();
+
+		// Try to determine which MediaType to use otherwise
+		if (selectedMediaType == null) {
+			for (MediaType mediaType : mediaTypes) {
+				if (mediaType.isConcrete()) {
+					selectedMediaType = mediaType;
+					break;
+				} else if (mediaType.equals(MediaType.ALL) || mediaType.equals(MEDIA_TYPE_APPLICATION)) {
+					selectedMediaType = MediaType.APPLICATION_OCTET_STREAM;
+					break;
+				}
 			}
 		}
 
