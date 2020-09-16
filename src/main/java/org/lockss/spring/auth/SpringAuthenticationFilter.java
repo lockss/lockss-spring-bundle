@@ -289,9 +289,14 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
       }
     }
 
-    // We've already established that the config has been loaded, which
-    // means that the AccountManager must at least have been created
-    AccountManager acctMgr = LockssDaemon.getLockssDaemon().getAccountManager();
+    AccountManager acctMgr =
+      (AccountManager)getLockssDaemon().waitManagerByKey(LockssDaemon.managerKey(AccountManager.class),
+							 Deadline.in(getReadyWaitTime(request)));
+    if (acctMgr == null) {
+      log.warn("Timed out waiting for AccountManager, can't check user auth");
+      sendNotReady(httpResponse);
+      return;
+    }
     if (!acctMgr.isStarted()) {
       log.debug2("AccountManager not started, waiting ...");
       if (!waitUserAccounts(acctMgr, request)) {
