@@ -31,8 +31,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package org.lockss.spring.base;
 
+import org.lockss.log.L4JLogger;
 import org.lockss.spring.converter.LockssHttpEntityMethodProcessor;
 import org.lockss.util.rest.multipart.MultipartMessageHttpMessageConverter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -43,11 +45,11 @@ import org.springframework.web.accept.ContentNegotiationManager;
 import org.springframework.web.method.support.HandlerMethodReturnValueHandler;
 import org.springframework.web.servlet.config.annotation.ContentNegotiationConfigurer;
 import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurationSupport;
+import org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver;
 import org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
 import org.springframework.web.util.UrlPathHelper;
-import org.lockss.log.L4JLogger;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -80,7 +82,7 @@ public abstract class BaseSpringBootApplication {
    * Modifier of the behavior of standard Spring MVC.
    */
   @Configuration
-  public static class SpringMvcCustomization extends WebMvcConfigurerAdapter {
+  public static class SpringMvcCustomization extends WebMvcConfigurationSupport {
 
     @Override
     public void configurePathMatch(PathMatchConfigurer configurer) {
@@ -101,7 +103,7 @@ public abstract class BaseSpringBootApplication {
 
     @Override
     public void configureContentNegotiation(ContentNegotiationConfigurer
-        configurer) {
+                                                    configurer) {
       // Prevent Spring from interpreting the end of a URL as a file suffix, or
       // from interpreting a "format=..." parameter for content type
       // specification and use only the Accept header for content type
@@ -118,6 +120,7 @@ public abstract class BaseSpringBootApplication {
      *
      * @return An instance of {@link LockssHttpEntityMethodProcessor}.
      */
+    @Bean
     public LockssHttpEntityMethodProcessor createLockssHttpEntityMethodProcessor() {
       // Converters for HTTP entity types to be supported by LockssHttpEntityMethodProcessor
       List<HttpMessageConverter<?>> messageConverters = new ArrayList<>();
@@ -136,10 +139,14 @@ public abstract class BaseSpringBootApplication {
      * @return An instance of {@link ReplacingRequestMappingHandlerAdapter} having the an updated set of return value
      * handlers.
      */
-    @Bean
+    @Override
     public RequestMappingHandlerAdapter createRequestMappingHandlerAdapter() {
-      return new ReplacingRequestMappingHandlerAdapter(createLockssHttpEntityMethodProcessor());
+      return new ReplacingRequestMappingHandlerAdapter(lockssHttpEntityMethodProcessor);
     }
+
+    // Used by the overridden methods here
+    @Autowired
+    LockssHttpEntityMethodProcessor lockssHttpEntityMethodProcessor;
 
     /**
      * Replaces {@link HttpEntityMethodProcessor} in the default list of return value handlers from
@@ -157,7 +164,7 @@ public abstract class BaseSpringBootApplication {
        * Constructor.
        *
        * @param handler The instance of {@link HandlerMethodReturnValueHandler} to replace
-       * {@link HttpEntityMethodProcessor} with.
+       *                {@link HttpEntityMethodProcessor} with.
        */
       public ReplacingRequestMappingHandlerAdapter(HandlerMethodReturnValueHandler handler) {
         this.replacingHandler = handler;
@@ -189,6 +196,49 @@ public abstract class BaseSpringBootApplication {
         setReturnValueHandlers(handlers);
       }
 
+    }
+
+    @Override
+    public ExceptionHandlerExceptionResolver createExceptionHandlerExceptionResolver() {
+      return new ReplacingExceptionHandlerExceptionResolver(lockssHttpEntityMethodProcessor);
+    }
+
+    private static class ReplacingExceptionHandlerExceptionResolver extends ExceptionHandlerExceptionResolver {
+
+      // Handle to replacing instance
+      private HandlerMethodReturnValueHandler replacingHandler;
+
+      /**
+       * Constructor.
+       *
+       * @param handler The instance of {@link HandlerMethodReturnValueHandler} to replace
+       *                {@link HttpEntityMethodProcessor} with.
+       */
+      public ReplacingExceptionHandlerExceptionResolver(HandlerMethodReturnValueHandler handler) {
+        this.replacingHandler = handler;
+      }
+
+      @Override
+      public void afterPropertiesSet() {
+        // Allow default return value handlers to be added
+        super.afterPropertiesSet();
+
+        // List to contain new set of handlers
+        List<HandlerMethodReturnValueHandler> handlers = new ArrayList<>();
+
+        for (HandlerMethodReturnValueHandler handler : getReturnValueHandlers().getHandlers()) {
+          if (handler instanceof HttpEntityMethodProcessor) {
+            // Replace HttpEntityMethodProcessor with LockssHttpEntityMethodProcessor
+            handlers.add(replacingHandler);
+          } else {
+            // Pass-through handler
+            handlers.add(handler);
+          }
+        }
+
+        // Set return value handlers
+        setReturnValueHandlers(handlers);
+      }
     }
   }
 }
