@@ -145,7 +145,7 @@ public abstract class BaseSpringBootApplication {
      * Replaces {@link HttpEntityMethodProcessor} in the default list of return value handlers from
      * {@link RequestMappingHandlerAdapter#getDefaultReturnValueHandlers()} with the provided
      * {@link HandlerMethodReturnValueHandler}.
-     *
+     * <p>
      * FIXME: Could be generalized
      */
     private static class ReplacingRequestMappingHandlerAdapter extends RequestMappingHandlerAdapter {
