@@ -39,7 +39,6 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.util.Base64;
 import java.util.Map;
 import java.util.Properties;
 import org.junit.Before;
@@ -51,6 +50,7 @@ import org.lockss.plugin.ArchivalUnit;
 import org.lockss.util.Logger;
 import org.lockss.util.MapUtil;
 import org.lockss.util.TemplateUtil;
+import org.lockss.util.auth.*;
 import org.lockss.util.rest.RestUtil;
 import org.lockss.test.*;
 import org.skyscreamer.jsonassert.JSONAssert;
@@ -570,10 +570,7 @@ public abstract class SpringLockssTestCase4 extends LockssTestCase4 {
       // Check whether there are credentials to be added.
       if (user != null && password != null) {
         // Yes: Set the authentication credentials.
-        String credentialsInHeader = user + ":" + password;
-        String authHeaderValue = "Basic " + Base64.getEncoder().encodeToString(
-            credentialsInHeader.getBytes(Charset.forName("US-ASCII")));
-
+	String authHeaderValue = AuthUtil.basicAuthHeaderValue(user, password);
         headers.set("Authorization", authHeaderValue);
       }
     }
