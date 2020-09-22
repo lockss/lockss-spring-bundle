@@ -103,8 +103,7 @@ public abstract class BaseSpringBootApplication {
     }
 
     @Override
-    public void configureContentNegotiation(ContentNegotiationConfigurer
-                                                    configurer) {
+    public void configureContentNegotiation(ContentNegotiationConfigurer configurer) {
       // Prevent Spring from interpreting the end of a URL as a file suffix, or
       // from interpreting a "format=..." parameter for content type
       // specification and use only the Accept header for content type
