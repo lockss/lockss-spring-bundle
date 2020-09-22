@@ -33,6 +33,7 @@ package org.lockss.spring.base;
 
 import org.lockss.log.L4JLogger;
 import org.lockss.spring.converter.LockssHttpEntityMethodProcessor;
+import org.lockss.spring.error.SpringControllerAdvice;
 import org.lockss.util.rest.multipart.MultipartMessageHttpMessageConverter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
@@ -43,6 +44,7 @@ import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.http.converter.support.AllEncompassingFormHttpMessageConverter;
 import org.springframework.web.accept.ContentNegotiationManager;
+import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.method.support.HandlerMethodReturnValueHandler;
 import org.springframework.web.servlet.config.annotation.ContentNegotiationConfigurer;
 import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
@@ -77,6 +79,11 @@ public abstract class BaseSpringBootApplication {
   protected static void configure() {
     System.setProperty(
         "org.apache.tomcat.util.buf.UDecoder.ALLOW_ENCODED_SLASH", "true");
+  }
+
+  @ControllerAdvice
+  public static class BaseServiceControllerAdvice extends SpringControllerAdvice {
+    // Intentionally left blank
   }
 
   /**
