@@ -39,6 +39,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.http.converter.support.AllEncompassingFormHttpMessageConverter;
 import org.springframework.web.accept.ContentNegotiationManager;
@@ -124,6 +125,7 @@ public abstract class BaseSpringBootApplication {
     public LockssHttpEntityMethodProcessor createLockssHttpEntityMethodProcessor() {
       // Converters for HTTP entity types to be supported by LockssHttpEntityMethodProcessor
       List<HttpMessageConverter<?>> messageConverters = new ArrayList<>();
+      messageConverters.add(new StringHttpMessageConverter());
       messageConverters.add(new MappingJackson2HttpMessageConverter());
       messageConverters.add(new AllEncompassingFormHttpMessageConverter());
       messageConverters.add(new MultipartMessageHttpMessageConverter());
