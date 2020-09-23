@@ -40,6 +40,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RequestMapping;
 
@@ -82,6 +83,16 @@ public class SpringControllerAdvice {
   // FIXME
   @ExceptionHandler(HttpMessageNotReadableException.class)
   public ResponseEntity<RestResponseErrorBody> handler(final HttpMessageNotReadableException e) {
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+
+    return new ResponseEntity<>(new RestResponseErrorBody(e.getMessage(), e.getClass().getSimpleName()), headers,
+        HttpStatus.BAD_REQUEST);
+  }
+
+  @ExceptionHandler(MethodArgumentNotValidException.class)
+  public ResponseEntity<RestResponseErrorBody> handler(final MethodArgumentNotValidException e) {
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
