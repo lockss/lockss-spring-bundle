@@ -36,11 +36,13 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RequestMapping;
 
@@ -50,6 +52,9 @@ public class SpringControllerAdvice {
   private static Logger log =
       LoggerFactory.getLogger(SpringControllerAdvice.class);
 
+  /**
+   * Handles the exception thrown when the request handler cannot generate a response that is acceptable by the client.
+   */
   @ExceptionHandler(HttpMediaTypeNotAcceptableException.class)
   public ResponseEntity<RestResponseErrorBody> handler(final HttpMediaTypeNotAcceptableException e) {
 
@@ -60,6 +65,10 @@ public class SpringControllerAdvice {
         HttpStatus.NOT_ACCEPTABLE);
   }
 
+  /**
+   * Handles the exception thrown when a client POSTs, PUTs, or PATCHes content of a type not supported by request
+   * handler.
+   */
   @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
   public ResponseEntity<RestResponseErrorBody> handler(final HttpMediaTypeNotSupportedException e) {
 
@@ -70,6 +79,9 @@ public class SpringControllerAdvice {
         HttpStatus.UNSUPPORTED_MEDIA_TYPE);
   }
 
+  /**
+   * Handles the exception thrown when an endpoint does not support the request HTTP method.
+   */
   @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
   public ResponseEntity<RestResponseErrorBody> handler(final HttpRequestMethodNotSupportedException e) {
 
@@ -80,7 +92,9 @@ public class SpringControllerAdvice {
         HttpStatus.METHOD_NOT_ALLOWED);
   }
 
-  // FIXME
+  /**
+   * Handles the exception thrown when there was an error parsing a HTTP request by a {@link HttpMessageConverter}.
+   */
   @ExceptionHandler(HttpMessageNotReadableException.class)
   public ResponseEntity<RestResponseErrorBody> handler(final HttpMessageNotReadableException e) {
 
@@ -91,8 +105,24 @@ public class SpringControllerAdvice {
         HttpStatus.BAD_REQUEST);
   }
 
+  /**
+   * Handles the exception thrown when a request parameter has failed validation (e.g., malformed).
+   */
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<RestResponseErrorBody> handler(final MethodArgumentNotValidException e) {
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+
+    return new ResponseEntity<>(new RestResponseErrorBody(e.getMessage(), e.getClass().getSimpleName()), headers,
+        HttpStatus.BAD_REQUEST);
+  }
+
+  /**
+   * Handles the exception thrown when a required request parameter is missing from the request.
+   */
+  @ExceptionHandler(MissingServletRequestParameterException.class)
+  public ResponseEntity<RestResponseErrorBody> handler(final MissingServletRequestParameterException e) {
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
