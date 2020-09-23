@@ -333,7 +333,7 @@ public class BaseSpringApiServiceImpl {
     }
   }
 
-  /** Subclasses should override to handle recieved Map messages */
+  /** Subclasses should override to handle received Map messages */
   protected void receiveMessage(Map map) {
   }
 
