@@ -1,4 +1,34 @@
 /*
+ * Copyright (c) 2019-2020, Board of Trustees of Leland Stanford Jr. University,
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ * list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation and/or
+ * other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its contributors
+ * may be used to endorse or promote products derived from this software without
+ * specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Additionally, portions of this code are copyright the Spring Framework:
+ *
  * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,20 +77,14 @@ import org.springframework.web.util.UrlPathHelper;
 import javax.servlet.http.HttpServletRequest;
 
 /**
- * Resolves {@link HttpEntity} and {@link RequestEntity} method argument values
- * and also handles {@link HttpEntity} and {@link ResponseEntity} return values.
- *
- * <p>An {@link HttpEntity} return type has a specific purpose. Therefore this
- * handler should be configured ahead of handlers that support any return
- * value type annotated with {@code @ModelAttribute} or {@code @ResponseBody}
- * to ensure they don't take over.
- *
- * @author Arjen Poutsma
- * @author Rossen Stoyanchev
- * @author Brian Clozel
- * @since 3.1
+ * This class was created with code from {@link HttpEntityMethodProcessor} and the portions of
+ * {@link AbstractMessageConverterMethodProcessor} required to customize the behavior of
+ * {@link AbstractMessageConverterMethodProcessor#writeWithMessageConverters(Object, MethodParameter, NativeWebRequest)}
+ * so that it honors the Content-Type provided by a Spring controller or controller advice.
  */
 public class LockssHttpEntityMethodProcessor extends AbstractMessageConverterMethodProcessor {
+
+	// The following code is from HttpEntityMethodProcessor
 
 	private static final Set<HttpMethod> SAFE_METHODS = EnumSet.of(HttpMethod.GET, HttpMethod.HEAD);
 
@@ -278,6 +302,8 @@ public class LockssHttpEntityMethodProcessor extends AbstractMessageConverterMet
 		}
 	}
 
+	// The following code is from AbstractMessageConverterMethodProcessor:
+
 	/**
 	 * Return the generic type of the {@code returnType} (or of the nested type
 	 * if it is an {@link HttpEntity}).
@@ -291,12 +317,10 @@ public class LockssHttpEntityMethodProcessor extends AbstractMessageConverterMet
 		}
 	}
 
-
 	private List<MediaType> getAcceptableMediaTypes(HttpServletRequest request) throws HttpMediaTypeNotAcceptableException {
 		List<MediaType> mediaTypes = this.contentNegotiationManager.resolveMediaTypes(new ServletWebRequest(request));
 		return (mediaTypes.isEmpty() ? Collections.singletonList(MediaType.ALL) : mediaTypes);
 	}
-
 
 	/**
 	 * Return the more specific of the acceptable and the producible media types
@@ -470,10 +494,10 @@ public class LockssHttpEntityMethodProcessor extends AbstractMessageConverterMet
 		List<MediaType> mediaTypes = new ArrayList<MediaType>(compatibleMediaTypes);
 		MediaType.sortBySpecificityAndQuality(mediaTypes);
 
-		// Get and use the Content-Type from the OutputMessage if set explicitly
+		// LOCKSS: Get and use the Content-Type from the OutputMessage if set explicitly
 		MediaType selectedMediaType = outputMessage.getHeaders().getContentType();
 
-		// Try to determine which MediaType to use otherwise
+		// LOCKSS: Try to determine which MediaType to use otherwise
 		if (selectedMediaType == null) {
 			for (MediaType mediaType : mediaTypes) {
 				if (mediaType.isConcrete()) {
@@ -493,11 +517,10 @@ public class LockssHttpEntityMethodProcessor extends AbstractMessageConverterMet
 					if (((GenericHttpMessageConverter) messageConverter).canWrite(
 							declaredType, valueType, selectedMediaType)) {
 
+					  // LOCKSS
 //						outputValue = (T) getAdvice().beforeBodyWrite(outputValue, returnType, selectedMediaType,
 //								(Class<? extends HttpMessageConverter<?>>) messageConverter.getClass(),
 //								inputMessage, outputMessage);
-
-						Object chain  = getAdvice();
 
 						if (outputValue != null) {
 							addContentDispositionHeader(inputMessage, outputMessage);
@@ -513,11 +536,10 @@ public class LockssHttpEntityMethodProcessor extends AbstractMessageConverterMet
 				}
 				else if (messageConverter.canWrite(valueType, selectedMediaType)) {
 
+					// LOCKSS
 //					outputValue = (T) getAdvice().beforeBodyWrite(outputValue, returnType, selectedMediaType,
 //							(Class<? extends HttpMessageConverter<?>>) messageConverter.getClass(),
 //							inputMessage, outputMessage);
-
-					Object chain  = getAdvice();
 
 					if (outputValue != null) {
 						addContentDispositionHeader(inputMessage, outputMessage);
