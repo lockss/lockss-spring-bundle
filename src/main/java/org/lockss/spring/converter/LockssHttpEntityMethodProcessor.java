@@ -118,6 +118,10 @@ public class LockssHttpEntityMethodProcessor extends AbstractMessageConverterMet
 		super(converters, manager);
 
 		this.contentNegotiationManager = manager;
+
+		this.pathStrategy = initPathStrategy(this.contentNegotiationManager);
+		this.safeExtensions.addAll(this.contentNegotiationManager.getAllFileExtensions());
+		this.safeExtensions.addAll(WHITELISTED_EXTENSIONS);
 	}
 
 	/**
@@ -508,6 +512,11 @@ public class LockssHttpEntityMethodProcessor extends AbstractMessageConverterMet
 					break;
 				}
 			}
+		}
+
+		// THIS IS A HACK
+		if (selectedMediaType.equals(MediaType.parseMediaType("application/warc"))) {
+			selectedMediaType = MediaType.APPLICATION_OCTET_STREAM;
 		}
 
 		if (selectedMediaType != null) {
