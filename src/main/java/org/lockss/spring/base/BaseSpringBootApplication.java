@@ -35,13 +35,10 @@ import org.lockss.log.L4JLogger;
 import org.lockss.spring.converter.LockssHttpEntityMethodProcessor;
 import org.lockss.spring.error.SpringControllerAdvice;
 import org.lockss.util.rest.multipart.MultipartMessageHttpMessageConverter;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.http.converter.StringHttpMessageConverter;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.http.converter.support.AllEncompassingFormHttpMessageConverter;
 import org.springframework.web.accept.ContentNegotiationManager;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -49,6 +46,7 @@ import org.springframework.web.method.support.HandlerMethodReturnValueHandler;
 import org.springframework.web.servlet.config.annotation.ContentNegotiationConfigurer;
 import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
+import org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver;
 import org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
 import org.springframework.web.util.UrlPathHelper;
@@ -121,72 +119,73 @@ public abstract class BaseSpringBootApplication {
           .ignoreUnknownPathExtensions(false);
     }
 
-    /**
-     * Creates a {@link LockssHttpEntityMethodProcessor} with some standard message converters.
-     *
-     * @return An instance of {@link LockssHttpEntityMethodProcessor}.
-     */
-    @Bean
-    public LockssHttpEntityMethodProcessor createLockssHttpEntityMethodProcessor() {
-      // Converters for HTTP entity types to be supported by LockssHttpEntityMethodProcessor
-      List<HttpMessageConverter<?>> messageConverters = new ArrayList<>();
-      messageConverters.add(new StringHttpMessageConverter());
-      messageConverters.add(new MappingJackson2HttpMessageConverter());
-      messageConverters.add(new AllEncompassingFormHttpMessageConverter());
-      messageConverters.add(new MultipartMessageHttpMessageConverter());
-
-      // Add new LockssHttpEntityMethodProcessor to list from WebMvcConfigurationSupport
-      return new LockssHttpEntityMethodProcessor(messageConverters, new ContentNegotiationManager());
+    private class LockssExceptionHandlerExceptionResolver extends ExceptionHandlerExceptionResolver {
+      @Override
+      protected List<HandlerMethodReturnValueHandler> getDefaultReturnValueHandlers() {
+        return substituteHttpEntityMethodProcessor(super.getDefaultReturnValueHandlers(), super.getMessageConverters());
+      }
     }
 
-    // Used by the overridden methods here
-    @Autowired
-    LockssHttpEntityMethodProcessor lockssHttpEntityMethodProcessor;
+    @Bean
+    public ExceptionHandlerExceptionResolver createLockssExceptionHandlerExceptionResolver() {
+      return new LockssExceptionHandlerExceptionResolver();
+    }
 
     @Bean
     public RequestMappingHandlerAdapter configureRequestMappingHandlerAdapter(RequestMappingHandlerAdapter adapter) {
 
-      // List to contain new set of handlers
-      List<HandlerMethodReturnValueHandler> handlers = new ArrayList<>();
-
-      for (HandlerMethodReturnValueHandler handler : adapter.getReturnValueHandlers()) {
-        if (handler instanceof HttpEntityMethodProcessor) {
-          // Replace HttpEntityMethodProcessor with LockssHttpEntityMethodProcessor
-          handlers.add(lockssHttpEntityMethodProcessor);
-        } else {
-          // Pass-through handler
-          handlers.add(handler);
-        }
-      }
-
-      // Set return value handlers
-      adapter.setReturnValueHandlers(handlers);
+      adapter.setReturnValueHandlers(
+          substituteHttpEntityMethodProcessor(adapter.getReturnValueHandlers(), adapter.getMessageConverters()));
 
       return adapter;
     }
 
-//    @Bean
-//    public ExceptionHandlerExceptionResolver configureExceptionHandlerExceptionResolver(ExceptionHandlerExceptionResolver resolver) {
-//
-//      // List to contain new set of handlers
-//      List<HandlerMethodReturnValueHandler> handlers = new ArrayList<>();
-//
-//      for (HandlerMethodReturnValueHandler handler : resolver.getReturnValueHandlers().getHandlers()) {
-//        if (handler instanceof HttpEntityMethodProcessor) {
-//          // Replace HttpEntityMethodProcessor with LockssHttpEntityMethodProcessor
-//          handlers.add(lockssHttpEntityMethodProcessor);
-//        } else {
-//          // Pass-through handler
-//          handlers.add(handler);
-//        }
-//      }
-//
-//      // Set return value handlers
-//      resolver.setReturnValueHandlers(handlers);
-//
-//      return resolver;
-//
-//    }
+    private static List<HttpMessageConverter<?>> injectMultipartMessageConverter(List<HttpMessageConverter<?>> messageConverters) {
+      // List to contain new set of HTTP message converters
+      List<HttpMessageConverter<?>> converters = new ArrayList<>();
+
+      log.trace("messageConverters.size() = {}", messageConverters.size());
+
+      // Inject our MultipartMessageHttpMessageConverter
+      for (HttpMessageConverter converter : messageConverters) {
+        if (converter instanceof AllEncompassingFormHttpMessageConverter){
+          converters.add(converter);
+          converters.add(new MultipartMessageHttpMessageConverter());
+        } else {
+          // Pass-through message converter
+          converters.add(converter);
+        }
+      }
+
+      return converters;
+    }
+
+    private static List<HandlerMethodReturnValueHandler> substituteHttpEntityMethodProcessor(
+        List<HandlerMethodReturnValueHandler> returnValueHandlers,
+        List<HttpMessageConverter<?>> messageConverters) {
+
+      // List to contain new set of return value handlers
+      List<HandlerMethodReturnValueHandler> handlers = new ArrayList<>();
+
+      // Create new LockssHttpEntityMethodProcessor with customized list of HTTP message converters
+      LockssHttpEntityMethodProcessor lockssHandler =
+          new LockssHttpEntityMethodProcessor(
+              injectMultipartMessageConverter(messageConverters),
+              new ContentNegotiationManager());
+
+      // Replace HttpEntityMethodProcessor with LockssHttpEntityMethodProcessor
+      for (HandlerMethodReturnValueHandler handler : returnValueHandlers) {
+        if (handler instanceof HttpEntityMethodProcessor) {
+          handlers.add(lockssHandler);
+        } else {
+          // Pass-through return value handler
+          handlers.add(handler);
+        }
+      }
+
+      // Return modified list of return value handlers
+      return handlers;
+    }
 
   }
 
