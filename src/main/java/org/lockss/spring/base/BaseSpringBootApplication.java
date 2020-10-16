@@ -41,15 +41,14 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.http.converter.ResourceHttpMessageConverter;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.http.converter.support.AllEncompassingFormHttpMessageConverter;
 import org.springframework.web.accept.ContentNegotiationManager;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.method.support.HandlerMethodReturnValueHandler;
 import org.springframework.web.method.support.HandlerMethodReturnValueHandlerComposite;
-import org.springframework.web.servlet.config.annotation.*;
-import org.springframework.web.servlet.handler.HandlerExceptionResolverComposite;
+import org.springframework.web.servlet.config.annotation.ContentNegotiationConfigurer;
+import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
 import org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver;
 import org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
@@ -65,7 +64,7 @@ public abstract class BaseSpringBootApplication {
 
   private static L4JLogger log = L4JLogger.getLogger();
 
-  @org.springframework.beans.factory.annotation.Autowired
+  @Autowired
   private ApplicationContext appCtx;
 
   /** make ApplicationContext available to subclasses */
@@ -129,12 +128,22 @@ public abstract class BaseSpringBootApplication {
     }
 
 //    @Bean
-//    public RequestMappingHandlerAdapter createLockssRequestMappingHandlerAdapter() {
-//      return new LockssRequestMappingHandlerAdapter();
+//    public RequestMappingHandlerAdapter createLockssRequestMappingHandlerAdapter(
+//        FormattingConversionService fcs,
+//        @Qualifier("mvcValidator") Validator validator) {
+//
+//      RequestMappingHandlerAdapter adapter = new LockssRequestMappingHandlerAdapter();
+//
+//      ConfigurableWebBindingInitializer initializer = new ConfigurableWebBindingInitializer();
+//      initializer.setConversionService(fcs);
+//      initializer.setValidator(validator);
+//      initializer.setMessageCodesResolver(getMessageCodesResolver());
+//
+//      adapter.setWebBindingInitializer(initializer);
+//
+//      return adapter;
 //    }
 
-    // FIXME Creating a new LockssRequestMappingHandlerAdapter or RequestMappingHandlerAdapter bean appears to
-    //       interfere with request argument validation. Modifying the existing bean appears to work:
     @Bean
     public RequestMappingHandlerAdapter modifyRequestMappingHandlerAdapter(RequestMappingHandlerAdapter adapter) {
 
