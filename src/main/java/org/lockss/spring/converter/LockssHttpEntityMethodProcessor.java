@@ -514,11 +514,6 @@ public class LockssHttpEntityMethodProcessor extends AbstractMessageConverterMet
 			}
 		}
 
-		// THIS IS A HACK
-		if (selectedMediaType.equals(MediaType.parseMediaType("application/warc"))) {
-			selectedMediaType = MediaType.APPLICATION_OCTET_STREAM;
-		}
-
 		if (selectedMediaType != null) {
 			selectedMediaType = selectedMediaType.removeQualityValue();
 			for (HttpMessageConverter<?> messageConverter : this.messageConverters) {
