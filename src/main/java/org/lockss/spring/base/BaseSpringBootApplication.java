@@ -35,6 +35,8 @@ import org.lockss.log.L4JLogger;
 import org.lockss.spring.converter.LockssHttpEntityMethodProcessor;
 import org.lockss.spring.error.SpringControllerAdvice;
 import org.lockss.util.rest.multipart.MultipartMessageHttpMessageConverter;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.web.HttpMessageConverters;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -46,9 +48,8 @@ import org.springframework.web.accept.ContentNegotiationManager;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.method.support.HandlerMethodReturnValueHandler;
 import org.springframework.web.method.support.HandlerMethodReturnValueHandlerComposite;
-import org.springframework.web.servlet.config.annotation.ContentNegotiationConfigurer;
-import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
+import org.springframework.web.servlet.config.annotation.*;
+import org.springframework.web.servlet.handler.HandlerExceptionResolverComposite;
 import org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver;
 import org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
@@ -133,19 +134,29 @@ public abstract class BaseSpringBootApplication {
     }
 
     private class LockssExceptionHandlerExceptionResolver extends ExceptionHandlerExceptionResolver {
+      @Autowired
+      HttpMessageConverters msgConverters;
+
       @Override
       public void afterPropertiesSet() {
         super.afterPropertiesSet();
         HandlerMethodReturnValueHandlerComposite composite = getReturnValueHandlers();
-        setReturnValueHandlers(substituteHttpEntityMethodProcessor(composite.getHandlers(), getMessageConverters()));
+        setReturnValueHandlers(
+            substituteHttpEntityMethodProcessor(
+                composite.getHandlers(), msgConverters.getConverters()));
       }
     }
 
     private class LockssRequestMappingHandlerAdapter extends RequestMappingHandlerAdapter {
+      @Autowired
+      HttpMessageConverters msgConverters;
+
       @Override
       public void afterPropertiesSet() {
         super.afterPropertiesSet();
-        setReturnValueHandlers(substituteHttpEntityMethodProcessor(getReturnValueHandlers(), getMessageConverters()));
+        setReturnValueHandlers(
+            substituteHttpEntityMethodProcessor(
+                getReturnValueHandlers(), msgConverters.getConverters()));
       }
     }
 
@@ -153,15 +164,11 @@ public abstract class BaseSpringBootApplication {
       // List to contain new set of HTTP message converters
       List<HttpMessageConverter<?>> converters = new ArrayList<>();
 
-      log.trace("messageConverters.size() = {}", messageConverters.size());
-
       // Inject our MultipartMessageHttpMessageConverter
       for (HttpMessageConverter converter : messageConverters) {
         if (converter instanceof AllEncompassingFormHttpMessageConverter){
           converters.add(converter);
           converters.add(new MultipartMessageHttpMessageConverter());
-          converters.add(new ResourceHttpMessageConverter());
-          converters.add(new MappingJackson2HttpMessageConverter());
         } else {
           // Pass-through message converter
           converters.add(converter);
