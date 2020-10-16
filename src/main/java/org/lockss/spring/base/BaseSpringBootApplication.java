@@ -128,9 +128,21 @@ public abstract class BaseSpringBootApplication {
       return new LockssExceptionHandlerExceptionResolver();
     }
 
+//    @Bean
+//    public RequestMappingHandlerAdapter createLockssRequestMappingHandlerAdapter() {
+//      return new LockssRequestMappingHandlerAdapter();
+//    }
+
+    // FIXME Creating a new LockssRequestMappingHandlerAdapter or RequestMappingHandlerAdapter bean appears to
+    //       interfere with request argument validation. Modifying the existing bean appears to work:
     @Bean
-    public RequestMappingHandlerAdapter createLockssRequestMappingHandlerAdapter() {
-      return new LockssRequestMappingHandlerAdapter();
+    public RequestMappingHandlerAdapter modifyRequestMappingHandlerAdapter(RequestMappingHandlerAdapter adapter) {
+
+      adapter.setReturnValueHandlers(
+          substituteHttpEntityMethodProcessor(adapter.getReturnValueHandlers(), adapter.getMessageConverters())
+      );
+
+      return adapter;
     }
 
     private class LockssExceptionHandlerExceptionResolver extends ExceptionHandlerExceptionResolver {
