@@ -40,6 +40,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.ResourceHttpMessageConverter;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.http.converter.support.AllEncompassingFormHttpMessageConverter;
 import org.springframework.web.accept.ContentNegotiationManager;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -160,6 +161,7 @@ public abstract class BaseSpringBootApplication {
           converters.add(converter);
           converters.add(new MultipartMessageHttpMessageConverter());
           converters.add(new ResourceHttpMessageConverter());
+          converters.add(new MappingJackson2HttpMessageConverter());
         } else {
           // Pass-through message converter
           converters.add(converter);
