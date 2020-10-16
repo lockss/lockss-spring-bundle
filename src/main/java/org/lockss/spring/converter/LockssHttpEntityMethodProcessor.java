@@ -118,6 +118,10 @@ public class LockssHttpEntityMethodProcessor extends AbstractMessageConverterMet
 		super(converters, manager);
 
 		this.contentNegotiationManager = manager;
+
+		this.pathStrategy = initPathStrategy(this.contentNegotiationManager);
+		this.safeExtensions.addAll(this.contentNegotiationManager.getAllFileExtensions());
+		this.safeExtensions.addAll(WHITELISTED_EXTENSIONS);
 	}
 
 	/**

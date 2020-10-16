@@ -36,19 +36,19 @@ import org.lockss.spring.converter.LockssHttpEntityMethodProcessor;
 import org.lockss.spring.error.SpringControllerAdvice;
 import org.lockss.util.rest.multipart.MultipartMessageHttpMessageConverter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.web.HttpMessageConverters;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.http.converter.StringHttpMessageConverter;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.http.converter.support.AllEncompassingFormHttpMessageConverter;
 import org.springframework.web.accept.ContentNegotiationManager;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.method.support.HandlerMethodReturnValueHandler;
+import org.springframework.web.method.support.HandlerMethodReturnValueHandlerComposite;
 import org.springframework.web.servlet.config.annotation.ContentNegotiationConfigurer;
 import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurationSupport;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
 import org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver;
 import org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
@@ -64,7 +64,7 @@ public abstract class BaseSpringBootApplication {
 
   private static L4JLogger log = L4JLogger.getLogger();
 
-  @org.springframework.beans.factory.annotation.Autowired
+  @Autowired
   private ApplicationContext appCtx;
 
   /** make ApplicationContext available to subclasses */
@@ -90,7 +90,7 @@ public abstract class BaseSpringBootApplication {
    * Modifier of the behavior of standard Spring MVC.
    */
   @Configuration
-  public static class SpringMvcCustomization extends WebMvcConfigurationSupport {
+  public static class SpringMvcCustomization extends WebMvcConfigurerAdapter {
 
     @Override
     public void configurePathMatch(PathMatchConfigurer configurer) {
@@ -122,131 +122,110 @@ public abstract class BaseSpringBootApplication {
           .ignoreUnknownPathExtensions(false);
     }
 
-    /**
-     * Creates a {@link LockssHttpEntityMethodProcessor} with some standard message converters.
-     *
-     * @return An instance of {@link LockssHttpEntityMethodProcessor}.
-     */
     @Bean
-    public LockssHttpEntityMethodProcessor createLockssHttpEntityMethodProcessor() {
-      // Converters for HTTP entity types to be supported by LockssHttpEntityMethodProcessor
-      List<HttpMessageConverter<?>> messageConverters = new ArrayList<>();
-      messageConverters.add(new StringHttpMessageConverter());
-      messageConverters.add(new MappingJackson2HttpMessageConverter());
-      messageConverters.add(new AllEncompassingFormHttpMessageConverter());
-      messageConverters.add(new MultipartMessageHttpMessageConverter());
-
-      // Add new LockssHttpEntityMethodProcessor to list from WebMvcConfigurationSupport
-      return new LockssHttpEntityMethodProcessor(messageConverters, new ContentNegotiationManager());
+    public ExceptionHandlerExceptionResolver createLockssExceptionHandlerExceptionResolver() {
+      return new LockssExceptionHandlerExceptionResolver();
     }
 
-    /**
-     * Creates an {@link ReplacingRequestMappingHandlerAdapter} that replaces {@link HttpEntityMethodProcessor} with
-     * {@link LockssHttpEntityMethodProcessor}.
-     *
-     * @return An instance of {@link ReplacingRequestMappingHandlerAdapter} having the an updated set of return value
-     * handlers.
-     */
-    @Override
-    public RequestMappingHandlerAdapter createRequestMappingHandlerAdapter() {
-      return new ReplacingRequestMappingHandlerAdapter(lockssHttpEntityMethodProcessor);
+//    @Bean
+//    public RequestMappingHandlerAdapter createLockssRequestMappingHandlerAdapter(
+//        FormattingConversionService fcs,
+//        @Qualifier("mvcValidator") Validator validator) {
+//
+//      RequestMappingHandlerAdapter adapter = new LockssRequestMappingHandlerAdapter();
+//
+//      ConfigurableWebBindingInitializer initializer = new ConfigurableWebBindingInitializer();
+//      initializer.setConversionService(fcs);
+//      initializer.setValidator(validator);
+//      initializer.setMessageCodesResolver(getMessageCodesResolver());
+//
+//      adapter.setWebBindingInitializer(initializer);
+//
+//      return adapter;
+//    }
+
+    @Bean
+    public RequestMappingHandlerAdapter modifyRequestMappingHandlerAdapter(RequestMappingHandlerAdapter adapter) {
+
+      adapter.setReturnValueHandlers(
+          substituteHttpEntityMethodProcessor(adapter.getReturnValueHandlers(), adapter.getMessageConverters())
+      );
+
+      return adapter;
     }
 
-    // Used by the overridden methods here
-    @Autowired
-    LockssHttpEntityMethodProcessor lockssHttpEntityMethodProcessor;
-
-    /**
-     * Replaces {@link HttpEntityMethodProcessor} in the default list of return value handlers from
-     * {@link RequestMappingHandlerAdapter#getDefaultReturnValueHandlers()} with the provided
-     * {@link HandlerMethodReturnValueHandler}.
-     * <p>
-     * FIXME: Could be generalized
-     */
-    private static class ReplacingRequestMappingHandlerAdapter extends RequestMappingHandlerAdapter {
-
-      // Handle to replacing instance
-      private HandlerMethodReturnValueHandler replacingHandler;
-
-      /**
-       * Constructor.
-       *
-       * @param handler The instance of {@link HandlerMethodReturnValueHandler} to replace
-       *                {@link HttpEntityMethodProcessor} with.
-       */
-      public ReplacingRequestMappingHandlerAdapter(HandlerMethodReturnValueHandler handler) {
-        this.replacingHandler = handler;
-      }
-
-      /**
-       * Calls {@code super.afterPropertiesSet()} then replaces {@link HttpEntityMethodProcessor} with the provided
-       * {@link HandlerMethodReturnValueHandler}.
-       */
-      @Override
-      public void afterPropertiesSet() {
-        // Allow default return value handlers to be added
-        super.afterPropertiesSet();
-
-        // List to contain new set of handlers
-        List<HandlerMethodReturnValueHandler> handlers = new ArrayList<>();
-
-        for (HandlerMethodReturnValueHandler handler : getReturnValueHandlers()) {
-          if (handler instanceof HttpEntityMethodProcessor) {
-            // Replace HttpEntityMethodProcessor with LockssHttpEntityMethodProcessor
-            handlers.add(replacingHandler);
-          } else {
-            // Pass-through handler
-            handlers.add(handler);
-          }
-        }
-
-        // Set return value handlers
-        setReturnValueHandlers(handlers);
-      }
-
-    }
-
-    @Override
-    public ExceptionHandlerExceptionResolver createExceptionHandlerExceptionResolver() {
-      return new ReplacingExceptionHandlerExceptionResolver(lockssHttpEntityMethodProcessor);
-    }
-
-    private static class ReplacingExceptionHandlerExceptionResolver extends ExceptionHandlerExceptionResolver {
-
-      // Handle to replacing instance
-      private HandlerMethodReturnValueHandler replacingHandler;
-
-      /**
-       * Constructor.
-       *
-       * @param handler The instance of {@link HandlerMethodReturnValueHandler} to replace
-       *                {@link HttpEntityMethodProcessor} with.
-       */
-      public ReplacingExceptionHandlerExceptionResolver(HandlerMethodReturnValueHandler handler) {
-        this.replacingHandler = handler;
-      }
+    private class LockssExceptionHandlerExceptionResolver extends ExceptionHandlerExceptionResolver {
+      @Autowired
+      HttpMessageConverters msgConverters;
 
       @Override
       public void afterPropertiesSet() {
-        // Allow default return value handlers to be added
         super.afterPropertiesSet();
-
-        // List to contain new set of handlers
-        List<HandlerMethodReturnValueHandler> handlers = new ArrayList<>();
-
-        for (HandlerMethodReturnValueHandler handler : getReturnValueHandlers().getHandlers()) {
-          if (handler instanceof HttpEntityMethodProcessor) {
-            // Replace HttpEntityMethodProcessor with LockssHttpEntityMethodProcessor
-            handlers.add(replacingHandler);
-          } else {
-            // Pass-through handler
-            handlers.add(handler);
-          }
-        }
-
-        // Set return value handlers
-        setReturnValueHandlers(handlers);
+        HandlerMethodReturnValueHandlerComposite composite = getReturnValueHandlers();
+        setReturnValueHandlers(
+            substituteHttpEntityMethodProcessor(
+                composite.getHandlers(), msgConverters.getConverters()));
       }
     }
+
+    private class LockssRequestMappingHandlerAdapter extends RequestMappingHandlerAdapter {
+      @Autowired
+      HttpMessageConverters msgConverters;
+
+      @Override
+      public void afterPropertiesSet() {
+        super.afterPropertiesSet();
+        setReturnValueHandlers(
+            substituteHttpEntityMethodProcessor(
+                getReturnValueHandlers(), msgConverters.getConverters()));
+      }
+    }
+
+    private static List<HttpMessageConverter<?>> injectMultipartMessageConverter(List<HttpMessageConverter<?>> messageConverters) {
+      // List to contain new set of HTTP message converters
+      List<HttpMessageConverter<?>> converters = new ArrayList<>();
+
+      // Inject our MultipartMessageHttpMessageConverter
+      for (HttpMessageConverter converter : messageConverters) {
+        if (converter instanceof AllEncompassingFormHttpMessageConverter){
+          converters.add(converter);
+          converters.add(new MultipartMessageHttpMessageConverter());
+        } else {
+          // Pass-through message converter
+          converters.add(converter);
+        }
+      }
+
+      return converters;
+    }
+
+    private static List<HandlerMethodReturnValueHandler> substituteHttpEntityMethodProcessor(
+        List<HandlerMethodReturnValueHandler> returnValueHandlers,
+        List<HttpMessageConverter<?>> messageConverters) {
+
+      // List to contain new set of return value handlers
+      List<HandlerMethodReturnValueHandler> handlers = new ArrayList<>();
+
+      // Create new LockssHttpEntityMethodProcessor with customized list of HTTP message converters
+      LockssHttpEntityMethodProcessor lockssHandler =
+          new LockssHttpEntityMethodProcessor(
+              injectMultipartMessageConverter(messageConverters),
+              new ContentNegotiationManager());
+
+      // Replace HttpEntityMethodProcessor with LockssHttpEntityMethodProcessor
+      for (HandlerMethodReturnValueHandler handler : returnValueHandlers) {
+        if (handler instanceof HttpEntityMethodProcessor) {
+          handlers.add(lockssHandler);
+        } else {
+          // Pass-through return value handler
+          handlers.add(handler);
+        }
+      }
+
+      // Return modified list of return value handlers
+      return handlers;
+    }
+
   }
+
 }
