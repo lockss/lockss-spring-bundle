@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2000-2019 Board of Trustees of Leland Stanford Jr. University,
+Copyright (c) 2000-2020 Board of Trustees of Leland Stanford Jr. University,
 all rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -33,21 +33,22 @@ package org.lockss.spring.auth;
 
 import java.io.IOException;
 import java.security.AccessControlException;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
+import java.util.*;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.lockss.account.UserAccount;
+import org.apache.commons.lang3.StringUtils;
+import org.lockss.account.*;
 import org.lockss.app.LockssDaemon;
-import org.lockss.config.ConfigManager;
+import org.lockss.config.*;
 import org.lockss.log.L4JLogger;
 import org.lockss.util.time.*;
+import org.lockss.util.ListUtil;
 import org.lockss.util.StringUtil;
+import org.lockss.util.IpFilter;
 import org.springframework.core.env.Environment;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
@@ -61,17 +62,113 @@ import org.springframework.web.context.support.WebApplicationContextUtils;
  * Default LOCKSS custom Spring authentication filter.
  */
 public class SpringAuthenticationFilter extends GenericFilterBean {
-
-  private static final String noAuthorizationHeader =
-      "No authorization header.";
-  private static final String noCredentials = "No userid/password credentials.";
-  private static final String badCredentials =
-      "Bad userid/password credentials.";
-  private static final String noUser = "User not found.";
   private final static L4JLogger log = L4JLogger.getLogger();
 
+  private static final String MISSING_AUTH_HEADER =
+    "No authentication header.";
+  private static final String MISSING_CREDENTIALS =
+    "No userid/password credentials.";
+  private static final String BAD_CREDENTIALS =
+    "Bad userid/password credentials.";
+  private static final String INVALID_AUTH_TYPE =
+    "Invalid Authentication Type (must be \"basic\" or \"none\").";
+
+  // Use UI access list params for REST also
+  private static final String ACCESS_PREFIX = "org.lockss.ui.access.";
+  public static final String PARAM_IP_INCLUDE = ACCESS_PREFIX + "ip.include";
+  public static final String PARAM_IP_EXCLUDE = ACCESS_PREFIX + "ip.exclude";
+
+  private static final String AUTH_PREFIX = Configuration.PREFIX + "restAuth.";
+
+  public static final String BASIC_AUTH_TYPE = "basic";
+  public static final String NONE_AUTH_TYPE = "none";
+
+  /** User authentication type: "none" or "basic" */
+  public static final String PARAM_AUTH_TYPE =
+    AUTH_PREFIX + "authenticationType";
+  public static final String DEFAULT_AUTH_TYPE = NONE_AUTH_TYPE;
+
+  /** If true, read-only requests need not supply authentication credentials */
+  public static final String PARAM_ALLOW_UNAUTHENTICATED_READ =
+    AUTH_PREFIX + "allowUnauthenticatedRead";
+  public static final boolean DEFAULT_ALLOW_UNAUTHENTICATED_READ = false;
+
+  /** If true, requests from the loopback address are accepted regardless
+   * of other IP access filters */
+  public static final String PARAM_ALLOW_LOOPBACK = ACCESS_PREFIX +
+    "allowLoopback";
+  public static final boolean DEFAULT_ALLOW_LOOPBACK = true;
+
+  /** Log attempted accesses forbidden by IP access rules */
+  public static final String PARAM_LOG_FORBIDDEN = ACCESS_PREFIX +
+    "logForbidden";
+  public static final boolean DEFAULT_LOG_FORBIDDEN = true;
+
+  private static List<String> LOCAL_IP_FILTERS = ListUtil.list("127.0.0.0/8",
+							       "::1");
+
   private Environment env;		// Spring Environment, access to
-					// config props
+					// Spring config props
+  private LockssDaemon daemon;
+  private boolean isConfigSet = false;
+  private String authType = DEFAULT_AUTH_TYPE;
+  private boolean allowUnauthenticatedRead =
+    DEFAULT_ALLOW_UNAUTHENTICATED_READ;;
+  private boolean logForbidden = DEFAULT_LOG_FORBIDDEN;
+  private boolean allowLocal = DEFAULT_ALLOW_LOOPBACK;
+  private IpFilter ipFilter;
+  private IpFilter localFilter;
+
+  public SpringAuthenticationFilter() {
+    createLocalFilter(Collections.emptyList());
+  }
+
+  public void setConfig(Configuration newConfig, Configuration oldConfig,
+			Configuration.Differences changedKeys) {
+    log.debug2("setConfig: {}, {}", this, newConfig);
+    if (changedKeys.contains(AUTH_PREFIX) ||
+	changedKeys.contains(ACCESS_PREFIX) ||
+	changedKeys.contains(ConfigManager.PARAM_PLATFORM_CONTAINER_SUBNETS)) {
+      authType = newConfig.get(PARAM_AUTH_TYPE, DEFAULT_AUTH_TYPE);
+      allowUnauthenticatedRead =
+	newConfig.getBoolean(PARAM_ALLOW_UNAUTHENTICATED_READ,
+			     DEFAULT_ALLOW_UNAUTHENTICATED_READ);
+      logForbidden = newConfig.getBoolean(PARAM_LOG_FORBIDDEN,
+					  DEFAULT_LOG_FORBIDDEN);
+      allowLocal = newConfig.getBoolean(PARAM_ALLOW_LOOPBACK,
+					DEFAULT_ALLOW_LOOPBACK);
+      createLocalFilter(ConfigManager.getPlatformContainerSubnets());
+      setIpFilter(newConfig.get(PARAM_IP_INCLUDE),
+		  newConfig.get(PARAM_IP_EXCLUDE));
+    }
+    isConfigSet = true;
+  }
+
+  private void setIpFilter(String includeIps, String excludeIps) {
+    log.debug("Installing new ip filter: incl: {}, excl: {}",
+	      includeIps, excludeIps);
+    try {
+      IpFilter filter = new IpFilter();
+      filter.setFilters(includeIps, excludeIps);
+      ipFilter = filter;
+    } catch (IpFilter.MalformedException e) {
+      log.warn("Malformed IP filter, filters not changed", e);
+    }
+  }
+
+  private void createLocalFilter(List<String> containerSubnets) {
+    if (allowLocal) {
+      IpFilter filt = new IpFilter();
+      try {
+	List<String> localSubnets = new ArrayList<>(LOCAL_IP_FILTERS);
+	localSubnets.addAll(containerSubnets);
+	filt.setFilters(localSubnets, null);
+      } catch (IpFilter.MalformedException e) {
+	log.error("Failed to allow local addresses" , e);
+      }
+      localFilter = filt;
+    }
+  }
 
   /**
    * Authentication filter.
@@ -85,7 +182,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
   @Override
   public void doFilter(ServletRequest request, ServletResponse response,
       FilterChain chain) throws IOException, ServletException {
-    log.debug2("Invoked.");
+    log.debug2("Invoked {}.", this);
 
     HttpServletRequest httpRequest = (HttpServletRequest) request;
 
@@ -99,16 +196,61 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
       log.trace("originalUrl = {}", originalUrl);
     }
 
+    String reqUri = httpRequest.getRequestURI();
     HttpServletResponse httpResponse = (HttpServletResponse) response;
 
+    // Check source IP addr if IP auth is required for this request
+    String srcIp = request.getRemoteAddr();
+    if (requiresIpAuthorization(httpRequest)) {
+      log.trace("Access to {} requested from {}", reqUri, srcIp);
+      if (!isConfigSet) {
+	log.debug2("Config not yet loaded, waiting ...");
+	if (!waitConfig(request)) {
+	  log.warn("Timed out waiting for config, can't check IP access");
+	  sendNotReady(httpResponse);
+	  return;
+	}
+      }
+      try {
+	if (!isIpAuthorized(srcIp)) {
+	  // The IP is NOT allowed
+	  if (logForbidden) {
+	    log.info("Access to {} forbidden from {}", reqUri, srcIp);
+	  }
+	  sendForbidden(httpResponse, "Forbidden");
+	  return;
+	}
+	String forwardedFor = httpRequest.getHeader("X-Forwarded-For");
+	if (!StringUtils.isEmpty(forwardedFor)) {
+	  String mostRecentIp = lastElement(forwardedFor);
+	  if (!isIpAuthorized(mostRecentIp)) {
+	    // The IP is NOT allowed
+	    if (logForbidden) {
+	      log.info("Access to {} forbidden for request forwarded from {}",
+		       reqUri, mostRecentIp);
+	    }
+	    sendForbidden(httpResponse, "Forbidden");
+	    return;
+	  }
+	}
+      } catch (Exception e) {
+	log.warn("Error checking IP", e);
+	httpResponse.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+//       httpResponse.setHandled(true);
+      }
+    } else {
+      log.trace("Allowing unchecked access from {} to {}", srcIp, reqUri);
+    }
+
+    // Check user credentials if required for this request
     try {
-      // Check whether authentication is not required at all.
-      if (!AuthUtil.isAuthenticationOn()) {
-        // Yes: Continue normally.
-	log.trace("Authorized (like everybody else).");
+      if (!isAuthenticationOn()) {
+	// If authentication is disabled, set the authenticated principal
+        // to one with maximum capabilities
+	log.trace("Authorization is disabled");
 
         SecurityContextHolder.getContext().setAuthentication(
-            getUnauthenticatedUserToken());
+            getPrivilegedUnauthenticatedUserToken());
 
         // Continue the chain.
         chain.doFilter(request, response);
@@ -124,124 +266,106 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
       return;
     }
 
-    // No: Check whether this request is available to everybody.
-    if (isWorldReachable(httpRequest)) {
-      // Yes: Continue normally.
-      log.trace("Authenticated (like everybody else).");
+    // Does this request require an authenticated user
+    if (!requiresAuthentication(httpRequest)) {
+	// No, set the authenticated principal to one with minimal capabilities
+      log.trace("Authentication not required for {}", reqUri);
 
       SecurityContextHolder.getContext().setAuthentication(
-          getUnauthenticatedUserToken());
+          getUnprivilegedUnauthenticatedUserToken());
 
       // Continue the chain.
       chain.doFilter(request, response);
       return;
     }
 
-    // No: Get the authorization header.
+    // Authentication required - is it configured yet?
+    if (!isConfigSet) {
+      log.debug2("Config not yet loaded, waiting ...");
+      if (!waitConfig(request)) {
+	log.warn("Timed out waiting for config, can't check user auth");
+	sendNotReady(httpResponse);
+	return;
+      }
+    }
+
+    AccountManager acctMgr =
+      (AccountManager)getLockssDaemon().waitManagerByKey(LockssDaemon.managerKey(AccountManager.class),
+							 Deadline.in(getReadyWaitTime(request)));
+    if (acctMgr == null) {
+      log.warn("Timed out waiting for AccountManager, can't check user auth");
+      sendNotReady(httpResponse);
+      return;
+    }
+    if (!acctMgr.isStarted()) {
+      log.debug2("AccountManager not started, waiting ...");
+      if (!waitUserAccounts(acctMgr, request)) {
+	log.warn("Timed out waiting for AccountManager, can't check user auth");
+	sendNotReady(httpResponse);
+	return;
+      }
+    }
+
+    // Get the authorization header.
     String authorizationHeader = httpRequest.getHeader("authorization");
     log.trace("authorizationHeader = {}", authorizationHeader);
 
-    // Check whether no authorization header was found.
     if (authorizationHeader == null) {
-      // Yes: Report the problem.
-      log.info(noAuthorizationHeader);
-
-      sendUnauthenticated(httpResponse, noAuthorizationHeader);
+      log.info(MISSING_AUTH_HEADER);
+      sendUnauthenticated(httpResponse, MISSING_AUTH_HEADER);
       return;
     }
 
-    // No: Get the user credentials in the authorization header.
-    String[] credentials =
-        AuthUtil.decodeBasicAuthorizationHeader(authorizationHeader);
-
-    // Check whether no credentials were found.
+    // Get the user credentials in the authorization header.
+    String[] credentials = org.lockss.util.auth.AuthUtil
+	.decodeBasicAuthorizationHeader(authorizationHeader);
     if (credentials == null) {
-      // Yes: Report the problem.
-      log.info(noCredentials);
-
-      sendUnauthenticated(httpResponse, noCredentials);
+      log.info(MISSING_CREDENTIALS);
+      sendUnauthenticated(httpResponse, MISSING_CREDENTIALS);
       return;
     }
 
-    // No: Check whether the found credentials are not what was expected.
+    // Check whether the found credentials are valid
     if (credentials.length != 2) {
-      // Yes: Report the problem.
-      log.info(badCredentials);
-      log.info("bad credentials = " + Arrays.toString(credentials));
-
-      sendUnauthenticated(httpResponse, badCredentials);
+      log.info("Malformed user credentials: {}", Arrays.toString(credentials));
+      sendUnauthenticated(httpResponse, "Malformed user credentials");
       return;
     }
 
     log.trace("credentials[0] = {}", credentials[0]);
 
-    // Wait until startup has progressed to the point where AccountManager
-    // should be available.
-    if (!waitReady()) {
-      httpResponse.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE,
-			     "Not Ready");
-      return;
-    }
-
-    // No: Get the user account.
-    UserAccount userAccount = null;
-
-    try {
-      userAccount = LockssDaemon.getLockssDaemon().getAccountManager()
-          .getUser(credentials[0]);
-    } catch (Exception e) {
-      log.error("credentials[0] = {}", credentials[0]);
-      log.error("credentials[1] = {}", credentials[1]);
-      log.error("LockssDaemon.getLockssDaemon().getAccountManager()."
-          + "getUser(credentials[0])", e);
-      httpResponse.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-			     "AccountManager not available");
-      return;
-    }
-
-    // Check whether no user was found.
+    UserAccount userAccount = acctMgr.getUserOrNull(credentials[0]);
     if (userAccount == null) {
-      // Yes: Report the problem.
-      log.info(noUser);
-
-      sendUnauthenticated(httpResponse, badCredentials);
+      log.info("User not found: {}", credentials[0]);
+      sendUnauthenticated(httpResponse, BAD_CREDENTIALS);
       return;
     }
 
     log.trace("userAccount.getName() = {}", userAccount.getName());
 
-    // No: Verify the user credentials.
-    boolean goodCredentials = userAccount.check(credentials[1]);
-    log.trace("goodCredentials = {}", goodCredentials);
-
-    // Check whether the user credentials are not good.
-    if (!goodCredentials) {
-      // Yes: Report the problem.
-      log.info(badCredentials);
-      log.info("userAccount.getName() = {}", userAccount.getName());
-      log.info("bad credentials = {}", Arrays.toString(credentials));
-
-      sendUnauthenticated(httpResponse, badCredentials);
+    // Check whether the user credentials are good.
+    if (!userAccount.check(credentials[1])) {
+      log.info("Invalid credentials = {}", Arrays.toString(credentials));
+      sendUnauthenticated(httpResponse, BAD_CREDENTIALS);
       return;
     }
 
-    // No: Get the user roles.
+    // Get the user roles, store in the thread's SecurityContext
     Collection<GrantedAuthority> roles = new HashSet<GrantedAuthority>();
 
-    for (Object role : userAccount.getRoleSet()) {
-      log.trace("role = {}", role);
-      roles.add(new SimpleGrantedAuthority((String) role));
+    for (String role : userAccount.getRoleSet()) {
+      roles.add(new SimpleGrantedAuthority(role));
     }
-
     log.trace("roles = {}", roles);
 
     // Create the completed authentication details.
     UsernamePasswordAuthenticationToken authentication =
-        new UsernamePasswordAuthenticationToken(credentials[0],
-            credentials[1], roles);
+      new UsernamePasswordAuthenticationToken(credentials[0],
+					      credentials[1],
+					      roles);
     log.trace("authentication = {}", authentication);
 
-    // Provide the completed authentication details.
+    // Store in the SecurityContext
     SecurityContextHolder.getContext().setAuthentication(authentication);
     log.debug2("User successfully authenticated");
 
@@ -251,6 +375,38 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
     log.debug2("Done.");
   }
 
+  String lastElement(String forwardedChain) {
+    String[] ips = forwardedChain.split(",");
+    return ips[ips.length-1].trim();
+  }
+
+  /** Return true is the system is configured to require user authentication */
+  boolean isAuthenticationOn() {
+    switch (authType) {
+    case NONE_AUTH_TYPE: return false;
+    case BASIC_AUTH_TYPE: return true;
+    default:
+      log.error("authenticationType = {}", authType);
+      throw new AccessControlException(authType + ": " + INVALID_AUTH_TYPE);
+    }
+  }
+
+  /** Return true if the IP address is allowed by the IP access filters */
+  boolean isIpAuthorized(String ip) throws IpFilter.MalformedException {
+    return (ipFilter != null && ipFilter.isIpAllowed(ip) ||
+	    (allowLocal && localFilter.isIpAllowed(ip)));
+  }
+
+  /** Send 503 Serice Unavailable, with a reason */
+  private void sendNotReady(HttpServletResponse httpResponse)
+      throws IOException{
+    httpResponse.setHeader("Retry-After", "60"); // random, inaccurate guess
+    httpResponse.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE,
+			   "Request requires authorization/authentication but service is still starting and cannot perform authentication yet.");
+  }
+
+  /** Send 401 Unauthorized (which is really unauthenticated), and ask for
+   * authentication */
   private void sendUnauthenticated(HttpServletResponse httpResponse,
 				   String msg)
       throws IOException {
@@ -259,82 +415,147 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
     httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED, msg);
   }
 
-  /**
-   * Provides the completed authentication for an unauthenticated user.
-   *
-   * @return a UsernamePasswordAuthenticationToken with the completed
-   * authentication details.
-   */
-  private UsernamePasswordAuthenticationToken getUnauthenticatedUserToken() {
-    Collection<GrantedAuthority> roles = new HashSet<GrantedAuthority>();
-    roles.add(new SimpleGrantedAuthority("unauthenticatedRole"));
+  /** Send 401 Forbidden */
+  private void sendForbidden(HttpServletResponse httpResponse, String msg)
+      throws IOException {
+    SecurityContextHolder.clearContext();
+    httpResponse.sendError(HttpServletResponse.SC_FORBIDDEN, msg);
+  }
 
-    return new UsernamePasswordAuthenticationToken("unauthenticatedUser",
+  /**
+   * Return an authentication token for a user who can perform all
+   * operations
+   */
+  UsernamePasswordAuthenticationToken getPrivilegedUnauthenticatedUserToken() {
+    Collection<GrantedAuthority> roles = new HashSet<GrantedAuthority>();
+    roles.add(new SimpleGrantedAuthority(Roles.ROLE_ALL_ACCESS));
+
+    return new UsernamePasswordAuthenticationToken("unauthenticatedPrivUser",
         "unauthenticatedPassword", roles);
   }
 
   /**
-   * Provides an indication of whether this request is available to everybody.
+   * Return an authentication token for a user who can perform only
+   * non-privileged operations
+   */
+  UsernamePasswordAuthenticationToken getUnprivilegedUnauthenticatedUserToken() {
+    Collection<GrantedAuthority> roles = new HashSet<GrantedAuthority>();
+    roles.add(new SimpleGrantedAuthority(Roles.ROLE_CONTENT_ACCESS));
+
+    return new UsernamePasswordAuthenticationToken("unauthenticatedUnprivUser",
+        "unauthenticatedPassword", roles);
+  }
+
+  /**
+   * Return true if this request requires authentication
    *
    * @param httpRequest A HttpServletRequest with the incoming request.
-   * @return <code>true</code> if this request is available to everybody,
-   * <code>false</code> otherwise.
+   * @return true if this request requires authentication, false otherwise.
    */
-  private boolean isWorldReachable(HttpServletRequest httpRequest) {
-    log.debug2("Invoked.");
+  boolean requiresAuthentication(HttpServletRequest httpRequest) {
+    return requiresAuthentication(httpRequest.getMethod().toUpperCase(),
+				  httpRequest.getRequestURI().toLowerCase());
+  }
 
-    // Get the HTTP request method name.
-    String httpMethodName = httpRequest.getMethod().toUpperCase();
-    log.trace("httpMethodName = {}", httpMethodName);
+  /**
+   * Return true if this request method and URI requires authentication
+   *
+   * @param httpMethodName A String with the request method.
+   * @param requestUri A String with the request URI.
+   * @return true if this request requires authentication, false otherwise.
+   */
+  boolean requiresAuthentication(String httpMethodName, String requestUri) {
+    log.trace("requiresAuthentication({}, {})", httpMethodName, requestUri);
 
-    // Get the HTTP request URI.
-    String requestUri = httpRequest.getRequestURI().toLowerCase();
-    log.trace("requestUri = {}", requestUri);
+    boolean result = !isStatusOrDocFetch(httpMethodName, requestUri);
 
-    // Determine whether it is world-reachable.
-    boolean result = getRequestUriAuthenticationBypass()
-        .isWorldReachable(httpMethodName, requestUri);
-    log.debug2("result = {}", result);
+    // Conditionally allow unauthenticated read requests
+    if (result && allowUnauthenticatedRead &&
+	isReadRequest(httpMethodName, requestUri)) {
+      result = false;
+    }
+    log.trace("result = {}", result);
     return result;
   }
 
   /**
-   * Checks whether the current user has the role required to fulfill a set of
-   * roles. Throws AccessControlException if the check fails.
+   * Return true if this request requires IP authorization
    *
-   * @param permissibleRoles A String... with the roles permissible for the user to be able to
-   * execute an operation.
+   * @param httpRequest A HttpServletRequest with the incoming request.
+   * @return true if this request requires IP authorization, false otherwise.
    */
-  public static void checkAuthorization(String... permissibleRoles) {
-    log.debug2("permissibleRoles = {}", Arrays.toString(permissibleRoles));
+  boolean requiresIpAuthorization(HttpServletRequest httpRequest) {
+    return requiresIpAuthorization(httpRequest.getMethod().toUpperCase(),
+				   httpRequest.getRequestURI().toLowerCase());
+  }
 
-    AuthUtil.checkAuthorization(SecurityContextHolder.getContext()
-        .getAuthentication().getName(), permissibleRoles);
-
-    log.debug2("Done.");
+  /*
+   * Return true if this request method and URI requires IP authorization
+   *
+   * @param httpMethodName A String with the request method.
+   * @param requestUri A String with the request URI.
+   * @return true if this request requires IP authorization, false otherwise.
+   */
+  boolean requiresIpAuthorization(String httpMethodName, String requestUri) {
+    return !isStatusOrDocFetch(httpMethodName, requestUri);
   }
 
   /**
-   * Provides the authentication bypass.
+   * Return true if this is a request for status or api docs
    *
-   * @return a RequestUriAuthenticationBypass with the authentication bypass.
+   * @param httpMethodName A String with the request method.
+   * @param requestUri A String with the request URI.
    */
-  public RequestUriAuthenticationBypass getRequestUriAuthenticationBypass() {
-    return new RequestUriAuthenticationBypassImpl();
+  boolean isStatusOrDocFetch(String httpMethodName, String requestUri) {
+    boolean result =
+      "GET".equals(httpMethodName)
+      && ("/status".equals(requestUri)
+	  || "/v2/api-docs".equals(requestUri)
+	  || "/swagger-ui.html".equals(requestUri)
+	  || requestUri.startsWith("/swagger-resources")
+	  || requestUri.startsWith("/webjars/springfox-swagger-ui")) ;
+    if (result) {
+      log.trace("Is status or doc request: {} {}", httpMethodName, requestUri);
+    }
+    return result;
   }
 
-  /** Return the Spring Environment
-   * @Param request the ServletRequest
+  /**
+   * Return true if this is a read request
+   *
+   * @param httpMethodName A String with the request method.
+   * @param requestUri A String with the request URI.
    */
-  Environment getEnvironment(ServletRequest request) {
-    if (env == null) {
-      javax.servlet.ServletContext sc = request.getServletContext();
-      WebApplicationContext wac =
-	WebApplicationContextUtils.getWebApplicationContext(sc);
-      env = wac.getEnvironment();
-    }
-    return env;
+  boolean isReadRequest(String httpMethodName, String requestUri) {
+    return "GET".equals(httpMethodName);
   }
+
+  // This should be in AuthUtil, as it's called statically from service
+  // implementations that have no direct relationship with
+  // SpringAuthenticationFilter.  Left here while there are still
+  // references.
+
+  /**
+   * Called by service impls to check whether the currently authenticated
+   * user has the necessary roles for a specific request
+   *
+   * @param permissibleRoles A String... with the roles permissible for the
+   * user to be able to execute an operation.
+   * @return true if the user has any roles that fulfill the permissible
+   * roles
+   */
+  public static void checkAuthorization(String... permissibleRoles) {
+    AuthUtil.checkHasRole(permissibleRoles);
+  }
+
+  /** Return the ApplicationContext
+   * @param request the ServletRequest
+   */
+  WebApplicationContext getApplicationContext(ServletRequest request) {
+    javax.servlet.ServletContext sc = request.getServletContext();
+    return WebApplicationContextUtils.getWebApplicationContext(sc);
+  }
+
 
   // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
   // The waitReady() mechanism from BaseSpringApiServiceImpl is
@@ -355,13 +576,13 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
   public static long DEFAULT_CONFIG_WAIT_TIME = TimeUtil.MINUTE;
 
 
-  protected long getReadyWaitTime() {
-    return getWaitTime(getEnvironment().getProperty(PARAM_READY_WAIT_TIME),
+  protected long getReadyWaitTime(ServletRequest request) {
+    return getWaitTime(getEnvironment(request).getProperty(PARAM_READY_WAIT_TIME),
 		       DEFAULT_READY_WAIT_TIME);
   }
 
-  protected long getConfigWaitTime() {
-    return getWaitTime(getEnvironment().getProperty(PARAM_CONFIG_WAIT_TIME),
+  protected long getConfigWaitTime(ServletRequest request) {
+    return getWaitTime(getEnvironment(request).getProperty(PARAM_CONFIG_WAIT_TIME),
 		       DEFAULT_CONFIG_WAIT_TIME);
   }
 
@@ -382,8 +603,8 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
    * service API handlers should wait for this before servicing an incoming
    * request.  Return false if the daemon doesn't start within the allotted
    * time, in which case the service should return an error. */
-  protected boolean waitReady() {
-    return waitReady(getReadyWaitTime());
+  protected boolean waitReady(ServletRequest request) {
+    return waitReady(getReadyWaitTime(request));
   }
 
   /** Wait up to the specified time for the daemon to fully start, return
@@ -407,8 +628,8 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
    * ready should wait for this before servicing an incoming request.
    * Return false if the config load hasn't completed within the allotted
    * time, in which case the service should return an error. */
-  protected boolean waitConfig() {
-    return waitConfig(getConfigWaitTime());
+  protected boolean waitConfig(ServletRequest request) {
+    return waitConfig(getConfigWaitTime(request));
   }
 
   /** Wait up to the specified time for the first config load to complete,
@@ -421,10 +642,33 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
     return getConfigManager().waitConfig(Deadline.in(wait));
   }
 
+  /** Wait for the first config load to complete, return true when it has.
+   * Wait time is set by the application property {@value
+   * PARAM_CONFIG_WAIT_TIME} (default {@value DEFAULT_CONFIG_WAIT_TIME}),
+   * in milliseconds.  Service API handlers that require the config to be
+   * loaded but which can perform their function before the daemon is
+   * ready should wait for this before servicing an incoming request.
+   * Return false if the config load hasn't completed within the allotted
+   * time, in which case the service should return an error. */
+  protected boolean waitUserAccounts(AccountManager acctMgr,
+				     ServletRequest request) {
+    return waitUserAccounts(acctMgr, getConfigWaitTime(request));
+  }
+
+  /** Wait up to the specified time for the first config load to complete,
+   * return true when it has.  Service API handlers that require the config
+   * to be loaded but which can perform their function before the daemon is
+   * ready should wait for this before servicing an incoming request.
+   * Return false if the config load hasn't completed within the allotted
+   * time, in which case the service should return an error. */
+  protected boolean waitUserAccounts(AccountManager acctMgr, long wait) {
+    return acctMgr.waitStarted(Deadline.in(wait));
+  }
+
   /**
    * Return the configuration manager.
    *
-   * @return a ConfigManager with the configuration manager.
+   * @return the ConfigManager instance
    */
   private ConfigManager getConfigManager() {
     return ConfigManager.getConfigManager();
@@ -435,10 +679,20 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
    * for it to be created
    *
    * @return the LockssDaemon instance
-   *
    */
   private LockssDaemon getLockssDaemon() {
     return LockssDaemon.getLockssDaemon();
   }
 
+  /** Return the Spring Environment
+   * @param request the ServletRequest
+   * @return the Spring Environment
+   */
+  Environment getEnvironment(ServletRequest request) {
+    if (env == null) {
+      WebApplicationContext wac = getApplicationContext(request);
+      env = wac.getEnvironment();
+    }
+    return env;
+  }
 }

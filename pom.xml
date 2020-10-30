@@ -39,17 +39,21 @@ POSSIBILITY OF SUCH DAMAGE.
   <parent>
     <groupId>org.lockss</groupId>
     <artifactId>lockss-parent-pom</artifactId>
-    <version>1.11.0</version>
+    <version>1.12.0</version>
     <relativePath />
   </parent>
   
   <groupId>org.lockss</groupId>
   <artifactId>lockss-spring-bundle</artifactId>
-  <version>2.0.9.0</version>
+  <version>2.0.10.0</version>
   <packaging>jar</packaging>
 
   <name>lockss-spring-bundle</name>
   <description>POM bundle and classes for LOCKSS projects using Spring Boot</description>
+
+  <properties>
+    <build.java.jarTests.skip>false</build.java.jarTests.skip>
+  </properties>
 
   <dependencies>
 
