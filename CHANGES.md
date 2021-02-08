@@ -1,8 +1,18 @@
-# Release Notes
+# `lockss-spring-bundle` Release Notes
 
-## Major Change Since 2.0.9.0
+## Changes Since 2.0.10.0
 
-*   (highlights go here)
+*   Switched to a 3-part version numbering scheme.
+
+## 2.0.10.0
+
+### Features
+
+*   ...
+
+### Fixes
+
+*   ...
 
 ## 2.0.9.0
 
