@@ -30,8 +30,12 @@
 
 package org.lockss.spring.error;
 
-import java.time.LocalDateTime;
+import org.lockss.util.rest.RestResponseErrorBody;
+import org.lockss.util.rest.exception.LockssRestHttpException;
 import org.springframework.http.HttpStatus;
+
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 /**
  * Unchecked exception to be thrown by REST service controllers and turned into
@@ -48,7 +52,14 @@ public class LockssRestServiceException extends RuntimeException {
   private String parsedRequest;
 
   // The UTC date and time of the exception.
-  private LocalDateTime utcTimestamp;
+  private LocalDateTime utcTimestamp = LocalDateTime.now(ZoneOffset.UTC);
+
+  // The servlet path whose controller method threw this exception
+  private String servletPath;
+
+  // The type of error experienced by the service
+  private LockssRestHttpException.ServerErrorType serverErrorType =
+      LockssRestHttpException.ServerErrorType.UNSPECIFIED_ERROR;
 
   /**
    * Default constructor.
@@ -280,6 +291,39 @@ public class LockssRestServiceException extends RuntimeException {
   }
 
   /**
+   * Constructor.
+   *
+   * @param serverErrorType A {@link LockssRestHttpException.ServerErrorType} with the type of server error.
+   * @param httpStatus An HttpStatus with the HTTP response status.
+   * @param message A String with the detail message.
+   * @param cause A Throwable with the cause.
+   * @param parsedRequest A String with a copy of the parsed HTTP request contents.
+   */
+  public LockssRestServiceException(
+      LockssRestHttpException.ServerErrorType serverErrorType,
+      HttpStatus httpStatus, String message,
+      Throwable cause, String parsedRequest) {
+
+    this(httpStatus, message, cause, parsedRequest);
+    this.setServerErrorType(serverErrorType);
+  }
+
+  /**
+   * Constructor.
+   *
+   * @param serverErrorType A {@link LockssRestHttpException.ServerErrorType} with the type of server error.
+   * @param httpStatus An HttpStatus with the HTTP response status.
+   * @param message A String with the detail message.
+   * @param parsedRequest A String with a copy of the parsed HTTP request contents.
+   */
+  public LockssRestServiceException(LockssRestHttpException.ServerErrorType serverErrorType,
+                                    HttpStatus httpStatus, String message, String parsedRequest) {
+
+    this(httpStatus, message, parsedRequest);
+    this.setServerErrorType(serverErrorType);
+  }
+
+  /**
    * Provides the HTTP response status.
    *
    * @return an HttpStatus with the HTTP response status.
@@ -337,5 +381,81 @@ public class LockssRestServiceException extends RuntimeException {
   public LockssRestServiceException setUtcTimestamp(LocalDateTime utcTimestamp) {
     this.utcTimestamp = utcTimestamp;
     return this;
+  }
+
+  /**
+   * Returns the type of server error experienced or {@code UNSPECIFIED_ERROR}, if it was not specified.
+   * See {@link LockssRestHttpException.ServerErrorType} for details.
+   *
+   * @return
+   */
+  public LockssRestHttpException.ServerErrorType getServerErrorType() {
+    return serverErrorType;
+  }
+
+  /**
+   * Sets the type of server error this {@link LockssRestServiceException} represents.
+   *
+   * @param serverErrorType
+   * @return This {@link LockssRestServiceException} for chaining.
+   */
+  public LockssRestServiceException setServerErrorType(LockssRestHttpException.ServerErrorType serverErrorType) {
+    this.serverErrorType = serverErrorType;
+    return this;
+  }
+
+  /**
+   * Returns the servlet path of the controller method that threw this {@link LockssRestServiceException}.
+   *
+   * @return A {@link String} containing the servlet path.
+   */
+  public String getServletPath() {
+    return servletPath;
+  }
+
+  /**
+   * Set the servlet path.
+   *
+   * @param servletPath A {@link String} containing the servlet path.
+   * @return This {@link LockssRestServiceException} for chaining.
+   */
+  public LockssRestServiceException setServletPath(String servletPath) {
+    this.servletPath = servletPath;
+    return this;
+  }
+
+  /**
+   * Transforms this {@link LockssRestServiceException} into a {@link RestResponseErrorBody.RestResponseError} for
+   * serialization.
+   */
+  public RestResponseErrorBody.RestResponseError toRestResponseError() {
+    return toRestResponseError(this);
+  }
+
+  /**
+   * Transforms a {@link LockssRestServiceException} into a {@link RestResponseErrorBody.RestResponseError} for
+   * serialization.
+   *
+   * @param lrse The {@link LockssRestServiceException} to transform.
+   * @return A {@link RestResponseErrorBody.RestResponseError} populated from the {@link LockssRestServiceException}.
+   */
+  public static RestResponseErrorBody.RestResponseError toRestResponseError(LockssRestServiceException lrse) {
+    // Get cause of LockssRestServiceException
+    Throwable cause = lrse.getCause();
+
+    // Use LRSE (self) as cause if a cause was not specified
+    if (cause == null) {
+      cause = lrse;
+    }
+
+    // Create and poulate RestResponseError from LRSE
+    return new RestResponseErrorBody.RestResponseError()
+        .setTimestamp(lrse.getUtcTimestamp().toEpochSecond(ZoneOffset.UTC))
+        .setStatus(lrse.getHttpStatus().value())
+        .setError(cause.toString())
+        .setException(cause.getClass().getName())
+        .setMessage(cause.getMessage())
+        .setPath(lrse.getServletPath())
+        .setServerErrorType(lrse.getServerErrorType());
   }
 }
