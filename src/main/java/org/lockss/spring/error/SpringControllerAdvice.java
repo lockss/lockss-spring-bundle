@@ -32,12 +32,15 @@ package org.lockss.spring.error;
 
 import org.lockss.log.L4JLogger;
 import org.lockss.util.rest.RestResponseErrorBody;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 @RequestMapping(produces = "application/vnd.error+json")
 public class SpringControllerAdvice {
+
   private static L4JLogger log = L4JLogger.getLogger();
 
   /**
@@ -49,6 +52,11 @@ public class SpringControllerAdvice {
    */
   @ExceptionHandler(LockssRestServiceException.class)
   public ResponseEntity<RestResponseErrorBody.RestResponseError> handler(final LockssRestServiceException lrse) {
-    return new ResponseEntity<>(lrse.toRestResponseError(), lrse.getHttpStatus());
+
+    // Content-Type hint to LockssHttpEntityMethodProcessor
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+
+    return new ResponseEntity<>(lrse.toRestResponseError(), headers, lrse.getHttpStatus());
   }
 }
