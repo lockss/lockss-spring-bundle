@@ -5,3 +5,7 @@
 /.settings/
 /TAGS
 +~
+
+/pom.xml.bak
+/*/pom.xml.bak
+/.surefire-*
