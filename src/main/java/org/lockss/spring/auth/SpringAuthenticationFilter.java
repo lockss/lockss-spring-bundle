@@ -336,7 +336,8 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
 
     // Check whether the found credentials are valid
     if (credentials.length != 2) {
-      log.info("Malformed user credentials: {}", Arrays.toString(credentials));
+      log.info("Malformed user credentials.  Should have 2 elements, has {}",
+               credentials.length);
       sendUnauthenticated(httpResponse, "Malformed user credentials");
       return;
     }
@@ -345,7 +346,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
 
     UserAccount userAccount = acctMgr.getUserOrNull(credentials[0]);
     if (userAccount == null) {
-      log.info("User not found: {}", credentials[0]);
+      log.info("Invalid credentials = {}:{}", credentials[0], "********");
       sendUnauthenticated(httpResponse, BAD_CREDENTIALS);
       return;
     }
@@ -354,7 +355,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
 
     // Check whether the user credentials are good.
     if (!userAccount.check(credentials[1])) {
-      log.info("Invalid credentials = {}", Arrays.toString(credentials));
+      log.info("Invalid credentials = {}:{}", credentials[0], "********");
       sendUnauthenticated(httpResponse, BAD_CREDENTIALS);
       return;
     }
