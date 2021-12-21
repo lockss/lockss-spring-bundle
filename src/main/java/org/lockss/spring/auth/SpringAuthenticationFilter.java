@@ -34,6 +34,8 @@ package org.lockss.spring.auth;
 import java.io.IOException;
 import java.security.AccessControlException;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
@@ -170,6 +172,13 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
     }
   }
 
+  private final static Pattern IPADDR_BRACKETS = Pattern.compile("^\\[(.*)\\]$");
+
+  private static String stripBrackets(String ipaddr) {
+    Matcher m = IPADDR_BRACKETS.matcher(ipaddr);
+    return m.matches() ? m.group(1) : ipaddr;
+  }
+
   /**
    * Authentication filter.
    *
@@ -200,7 +209,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
     HttpServletResponse httpResponse = (HttpServletResponse) response;
 
     // Check source IP addr if IP auth is required for this request
-    String srcIp = request.getRemoteAddr();
+    String srcIp = stripBrackets(request.getRemoteAddr());
     if (requiresIpAuthorization(httpRequest)) {
       log.trace("Access to {} requested from {}", reqUri, srcIp);
       if (!isConfigSet) {
@@ -327,7 +336,8 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
 
     // Check whether the found credentials are valid
     if (credentials.length != 2) {
-      log.info("Malformed user credentials: {}", Arrays.toString(credentials));
+      log.info("Malformed user credentials.  Should have 2 elements, has {}",
+               credentials.length);
       sendUnauthenticated(httpResponse, "Malformed user credentials");
       return;
     }
@@ -336,7 +346,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
 
     UserAccount userAccount = acctMgr.getUserOrNull(credentials[0]);
     if (userAccount == null) {
-      log.info("User not found: {}", credentials[0]);
+      log.info("Invalid credentials = {}:{}", credentials[0], "********");
       sendUnauthenticated(httpResponse, BAD_CREDENTIALS);
       return;
     }
@@ -345,7 +355,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
 
     // Check whether the user credentials are good.
     if (!userAccount.check(credentials[1])) {
-      log.info("Invalid credentials = {}", Arrays.toString(credentials));
+      log.info("Invalid credentials = {}:{}", credentials[0], "********");
       sendUnauthenticated(httpResponse, BAD_CREDENTIALS);
       return;
     }
