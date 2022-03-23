@@ -33,6 +33,7 @@ package org.lockss.spring.error;
 import org.lockss.log.L4JLogger;
 import org.lockss.util.rest.RestResponseErrorBody;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -58,5 +59,24 @@ public class SpringControllerAdvice {
     headers.setContentType(MediaType.APPLICATION_JSON);
 
     return new ResponseEntity<>(lrse.toRestResponseError(), headers, lrse.getHttpStatus());
+  }
+
+  /**
+   * Handles UnsupportedOperationException
+   *
+   * @param e an UnsupportedOperationException
+   * @return a ResponseEntity<RestResponseErrorBody> with the error response in
+   * JSON format with media type {@code application/vnd.error+json}.
+   */
+  @ExceptionHandler(UnsupportedOperationException.class)
+  public ResponseEntity<RestResponseErrorBody.RestResponseError> handler(final UnsupportedOperationException e) {
+
+    // Content-Type hint to LockssHttpEntityMethodProcessor
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    RestResponseErrorBody.RestResponseError rre =
+      new RestResponseErrorBody.RestResponseError(e.getMessage(),
+                                                  e.getClass().toString());
+    return new ResponseEntity<>(rre, headers, HttpStatus.NOT_IMPLEMENTED);
   }
 }
