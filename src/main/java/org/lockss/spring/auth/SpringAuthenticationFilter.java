@@ -231,7 +231,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
 	}
 	String forwardedFor = httpRequest.getHeader("X-Forwarded-For");
 	if (!StringUtils.isEmpty(forwardedFor)) {
-	  String mostRecentIp = lastElement(forwardedFor);
+	  String mostRecentIp = stripBrackets(lastElement(forwardedFor));
 	  if (!isIpAuthorized(mostRecentIp)) {
 	    // The IP is NOT allowed
 	    if (logForbidden) {
