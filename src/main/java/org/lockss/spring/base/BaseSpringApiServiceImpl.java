@@ -42,6 +42,7 @@ import org.lockss.log.L4JLogger;
 import org.lockss.util.StringUtil;
 import org.lockss.util.ClassUtil;
 import org.lockss.util.time.*;
+import org.lockss.plugin.PluginManager;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
@@ -156,6 +157,15 @@ public class BaseSpringApiServiceImpl {
     return LockssDaemon.getLockssDaemon();
   }
 
+  /**
+   * Provides the plugin manager.
+   *
+   * @return the PluginManager
+   */
+  protected PluginManager getPluginManager() {
+    return LockssDaemon.getLockssDaemon().getPluginManager();
+  }
+
   // JMS Producer and Consumer setup
 
   public int JMS_SEND = 1;
@@ -173,6 +183,11 @@ public class BaseSpringApiServiceImpl {
     return ClassUtil.getClassNameWithoutPackage(getClass());
   }
 
+  /**
+   * Return the LockssDaemon instance, waiting, if necessary, until it
+   * has finished initializing.  If it isn't finished in 5 minutes
+   * return null.
+   */
   protected LockssDaemon getRunningLockssDaemon() {
     LockssDaemon daemon = null;
     while (daemon == null) {
