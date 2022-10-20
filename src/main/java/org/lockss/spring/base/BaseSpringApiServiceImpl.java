@@ -45,6 +45,9 @@ import org.lockss.util.time.*;
 import org.lockss.plugin.PluginManager;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.core.env.Environment;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 
 /**
@@ -206,6 +209,30 @@ public class BaseSpringApiServiceImpl {
       // exit
     }
     return null;
+  }
+
+  /** Create and return a test/plain ResponseEntity with the supplied
+   * string and status code.
+   * @param msg the string to be sent as the response bode (usually an
+   * error message
+   * @code the HTTP status code
+   * @return a ResponseEntity
+   */
+  protected ResponseEntity stringResponse(String msg, HttpStatus code) {
+    return ResponseEntity.status(code).contentType(MediaType.TEXT_PLAIN)
+      .body(msg);
+  }
+
+  /** Create and return an application/json ResponseEntity with the
+   * json encoding of the supplied map, and status code.
+   * @param map the map to be encoded as a json response
+   * @code the HTTP status code
+   * @return a ResponseEntity
+   */
+  protected ResponseEntity jsonResponse(Map<String, ? extends Object> map,
+                                        HttpStatus code) {
+    return ResponseEntity.status(code).contentType(MediaType.APPLICATION_JSON)
+      .body(map);
   }
 
   /** If this service is a LockssConfigurableService, register its config
