@@ -154,6 +154,12 @@ POSSIBILITY OF SUCH DAMAGE.
       <scope>test</scope>
     </dependency>
 
+    <dependency>
+      <groupId>org.lockss.laaws</groupId>
+      <artifactId>lockss-plugin-compat</artifactId>
+      <version>${version.lockss.lockss-plugin-compat}</version>
+    </dependency>
+
   </dependencies>
 
 </project>
