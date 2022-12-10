@@ -79,4 +79,25 @@ public class SpringControllerAdvice {
                                                   e.getClass().toString());
     return new ResponseEntity<>(rre, headers, HttpStatus.NOT_IMPLEMENTED);
   }
+
+  /**
+   * Handles any other unhandled exception as a last resort.
+   *
+   * @param e An Exception with the exception not handled by other exception
+   * handler methods.
+   * @return a ResponseEntity<RestResponseErrorBody> with the error response in
+   * JSON format with media type {@code application/vnd.error+json}.
+   */
+  @ExceptionHandler(Exception.class)
+  public ResponseEntity<RestResponseErrorBody.RestResponseError> defaultHandler(Exception e) {
+    log.error("Caught otherwise unhandled exception", e);
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+
+    RestResponseErrorBody.RestResponseError rre =
+        new RestResponseErrorBody.RestResponseError(e.getMessage(), e.getClass().toString());
+
+    return new ResponseEntity<>(rre, headers, HttpStatus.INTERNAL_SERVER_ERROR);
+  }
 }
