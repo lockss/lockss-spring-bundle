@@ -88,16 +88,16 @@ public class SpringControllerAdvice {
    * @return a ResponseEntity<RestResponseErrorBody> with the error response in
    * JSON format with media type {@code application/vnd.error+json}.
    */
-  @ExceptionHandler(Exception.class)
-  public ResponseEntity<RestResponseErrorBody.RestResponseError> defaultHandler(Exception e) {
-    log.error("Caught otherwise unhandled exception", e);
-
-    HttpHeaders headers = new HttpHeaders();
-    headers.setContentType(MediaType.APPLICATION_JSON);
-
-    RestResponseErrorBody.RestResponseError rre =
-        new RestResponseErrorBody.RestResponseError(e.getMessage(), e.getClass().toString());
-
-    return new ResponseEntity<>(rre, headers, HttpStatus.INTERNAL_SERVER_ERROR);
-  }
+//  @ExceptionHandler(Exception.class)
+//  public ResponseEntity<RestResponseErrorBody.RestResponseError> defaultHandler(Exception e) {
+//    log.error("Caught otherwise unhandled exception", e);
+//
+//    HttpHeaders headers = new HttpHeaders();
+//    headers.setContentType(MediaType.APPLICATION_JSON);
+//
+//    RestResponseErrorBody.RestResponseError rre =
+//        new RestResponseErrorBody.RestResponseError(e.getMessage(), e.getClass().toString());
+//
+//    return new ResponseEntity<>(rre, headers, HttpStatus.INTERNAL_SERVER_ERROR);
+//  }
 }
