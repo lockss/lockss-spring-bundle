@@ -36,7 +36,7 @@ import org.lockss.spring.converter.LockssHttpEntityMethodProcessor;
 import org.lockss.spring.error.SpringControllerAdvice;
 import org.lockss.util.rest.multipart.MultipartMessageHttpMessageConverter;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.web.HttpMessageConverters;
+import org.springframework.boot.autoconfigure.http.HttpMessageConverters;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -122,10 +122,10 @@ public abstract class BaseSpringBootApplication {
           .ignoreUnknownPathExtensions(false);
     }
 
-    @Bean
-    public ExceptionHandlerExceptionResolver createLockssExceptionHandlerExceptionResolver() {
-      return new LockssExceptionHandlerExceptionResolver();
-    }
+//    @Bean
+//    public ExceptionHandlerExceptionResolver createLockssExceptionHandlerExceptionResolver() {
+//      return new LockssExceptionHandlerExceptionResolver();
+//    }
 
 //    @Bean
 //    public RequestMappingHandlerAdapter createLockssRequestMappingHandlerAdapter(
@@ -144,15 +144,15 @@ public abstract class BaseSpringBootApplication {
 //      return adapter;
 //    }
 
-    @Bean
-    public RequestMappingHandlerAdapter modifyRequestMappingHandlerAdapter(RequestMappingHandlerAdapter adapter) {
-
-      adapter.setReturnValueHandlers(
-          substituteHttpEntityMethodProcessor(adapter.getReturnValueHandlers(), adapter.getMessageConverters())
-      );
-
-      return adapter;
-    }
+//    @Bean
+//    public RequestMappingHandlerAdapter modifyRequestMappingHandlerAdapter(RequestMappingHandlerAdapter adapter) {
+//
+//      adapter.setReturnValueHandlers(
+//          substituteHttpEntityMethodProcessor(adapter.getReturnValueHandlers(), adapter.getMessageConverters())
+//      );
+//
+//      return adapter;
+//    }
 
     private class LockssExceptionHandlerExceptionResolver extends ExceptionHandlerExceptionResolver {
       @Autowired
