@@ -39,6 +39,7 @@ import org.lockss.util.jms.*;
 import org.lockss.app.LockssDaemon;
 import org.lockss.config.*;
 import org.lockss.log.L4JLogger;
+import org.lockss.state.StateManager;
 import org.lockss.util.StringUtil;
 import org.lockss.util.ClassUtil;
 import org.lockss.util.time.*;
@@ -167,6 +168,15 @@ public class BaseSpringApiServiceImpl {
    */
   protected PluginManager getPluginManager() {
     return LockssDaemon.getLockssDaemon().getPluginManager();
+  }
+
+  /**
+   * Provides the state manager.
+   *
+   * @return the StateManager
+   */
+  protected StateManager getStateManager() {
+    return LockssDaemon.getLockssDaemon().getManagerByType(StateManager.class);
   }
 
   // JMS Producer and Consumer setup
