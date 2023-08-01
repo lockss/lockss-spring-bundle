@@ -117,13 +117,14 @@ public abstract class SpringLockssTestCase4 extends LockssTestCase4 {
    * ConfigManager, and arranges for an initial config load to appear to
    * have been done. */
   @Override
-  protected void makeConfigManager() {
-    ConfigManager.makeConfigManager(appCtx);
+  protected ConfigManager makeConfigManager() {
+    ConfigManager mgr = ConfigManager.makeConfigManager(appCtx);
     // Some Spring components, and esp. SpringAuthenticationFilter, wait
     // for the config to be loaded.  Which, in a test environment, doesn't
     // happen automatically.  Install an empty config so that all the
     // callbacks get called and waitConfig() returns.
     ConfigurationUtil.installConfig(ConfigManager.newConfiguration());
+    return mgr;
   }
 
   /**
