@@ -85,6 +85,6 @@ public abstract class SpringLockssBaseApiController
     return new ApiStatus("swagger/swagger.yaml")
       .setReady(daemon.isAppRunning())
       .setReadyTime(daemon.getReadyTime())
-      .setPluginsReady(daemon.areLoadablePluginsReady());
+      .setStartupStatus(daemon.getStartupStatus());
   }
 }
