@@ -117,12 +117,20 @@ public class TestSpringAuthenticationFilter extends SpringLockssTestCase4 {
     assertFalse(authFilter.isIpAuthorized("127.0.0.1"));
     assertFalse(authFilter.isIpAuthorized("44.55.66.77"));
 
+    assertFalse(authFilter.isIpAuthorized("1.2.3.4", true));
+    assertFalse(authFilter.isIpAuthorized("127.0.0.1", true));
+    assertFalse(authFilter.isIpAuthorized("44.55.66.77", true));
+
     ConfigurationUtil.addFromArgs(ConfigManager.PARAM_PLATFORM_CONTAINER_SUBNETS,
 				  "88.77.66.0/24",
 				  SpringAuthenticationFilter.PARAM_ALLOW_LOOPBACK,
 				  "true");
     assertTrue(authFilter.isIpAuthorized("127.0.0.1"));
     assertTrue(authFilter.isIpAuthorized("88.77.66.11"));
+
+    assertFalse(authFilter.isIpAuthorized("1.2.3.4", true));
+    assertTrue(authFilter.isIpAuthorized("127.0.0.1", true));
+    assertTrue(authFilter.isIpAuthorized("88.77.66.11", true));
   }
 
   @Test
@@ -132,4 +140,14 @@ public class TestSpringAuthenticationFilter extends SpringLockssTestCase4 {
     assertEquals("1.2.3.4", authFilter.lastElement("2.2.2.2,1.2.3.4 "));
   }
 
+
+  @Test
+  public void testIsRestrictedPath() throws Exception {
+    assertFalse(authFilter.isRestrictedPath("/xyzzy"));
+    assertTrue(authFilter.isRestrictedPath("/usernames"));
+    assertTrue(authFilter.isRestrictedPath("/usernames/"));
+    assertTrue(authFilter.isRestrictedPath("/users"));
+    assertTrue(authFilter.isRestrictedPath("/users/"));
+    assertTrue(authFilter.isRestrictedPath("/users/xyzzy"));
+  }
 }

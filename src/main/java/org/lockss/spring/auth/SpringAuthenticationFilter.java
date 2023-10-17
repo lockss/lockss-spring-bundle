@@ -59,6 +59,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.GenericFilterBean;
 import org.springframework.web.context.*;
 import org.springframework.web.context.support.WebApplicationContextUtils;
+import org.springframework.web.util.UriComponents;
+import org.springframework.web.util.UriComponentsBuilder;
 
 /**
  * Default LOCKSS custom Spring authentication filter.
@@ -179,6 +181,15 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
     return m.matches() ? m.group(1) : ipaddr;
   }
 
+  Pattern IP_PROTECTED_PATHS = Pattern.compile("^/(usernames|users).*");
+
+  protected boolean isRestrictedPath(String reqUri) {
+    UriComponents reqUriComponents =
+        UriComponentsBuilder.fromUriString(reqUri).build();
+
+    return IP_PROTECTED_PATHS.matcher(reqUriComponents.getPath()).matches();
+  }
+
   /**
    * Authentication filter.
    *
@@ -206,6 +217,9 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
     }
 
     String reqUri = httpRequest.getRequestURI();
+
+    boolean isRestrictedPath = isRestrictedPath(reqUri);
+
     HttpServletResponse httpResponse = (HttpServletResponse) response;
 
     // Check source IP addr if IP auth is required for this request
@@ -221,7 +235,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
 	}
       }
       try {
-	if (!isIpAuthorized(srcIp)) {
+	if (!isIpAuthorized(srcIp, isRestrictedPath)) {
 	  // The IP is NOT allowed
 	  if (logForbidden) {
 	    log.info("Access to {} forbidden from {}", reqUri, srcIp);
@@ -232,7 +246,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
 	String forwardedFor = httpRequest.getHeader("X-Forwarded-For");
 	if (!StringUtils.isEmpty(forwardedFor)) {
 	  String mostRecentIp = stripBrackets(lastElement(forwardedFor));
-	  if (!isIpAuthorized(mostRecentIp)) {
+	  if (!isIpAuthorized(mostRecentIp, isRestrictedPath)) {
 	    // The IP is NOT allowed
 	    if (logForbidden) {
 	      log.info("Access to {} forbidden for request forwarded from {}",
@@ -403,8 +417,12 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
 
   /** Return true if the IP address is allowed by the IP access filters */
   boolean isIpAuthorized(String ip) throws IpFilter.MalformedException {
-    return (ipFilter != null && ipFilter.isIpAllowed(ip) ||
-	    (allowLocal && localFilter.isIpAllowed(ip)));
+    return isIpAuthorized(ip, false);
+  }
+
+  boolean isIpAuthorized(String ip, boolean isRestrictedPath) throws IpFilter.MalformedException {
+    return ((ipFilter != null && !isRestrictedPath && ipFilter.isIpAllowed(ip)) ||
+        (allowLocal && localFilter.isIpAllowed(ip)));
   }
 
   /** Send 503 Serice Unavailable, with a reason */
