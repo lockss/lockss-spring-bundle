@@ -28,14 +28,17 @@
 package org.lockss.spring.auth;
 
 import org.junit.*;
+import org.junit.runner.RunWith;
 import org.lockss.spring.test.SpringLockssTestCase4;
 import org.lockss.config.*;
 import org.lockss.log.*;
 import org.lockss.test.ConfigurationUtil;
+import org.springframework.test.context.junit4.SpringRunner;
 
 /**
  * Test class for org.lockss.spring.auth.SpringAuthenticationFilter
  */
+@RunWith(SpringRunner.class)
 public class TestSpringAuthenticationFilter extends SpringLockssTestCase4 {
   L4JLogger log = L4JLogger.getLogger();
 
