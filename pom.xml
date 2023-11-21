@@ -168,7 +168,7 @@ POSSIBILITY OF SUCH DAMAGE.
     <dependency>
       <groupId>org.junit.platform</groupId>
       <artifactId>junit-platform-commons</artifactId>
-      <version>1.8.2</version>
+      <version>${version.group.junit5-platform}</version>
     </dependency>
 
     <dependency>
