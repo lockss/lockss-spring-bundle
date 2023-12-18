@@ -68,7 +68,7 @@ public class TestSpringAuthenticationFilter extends SpringLockssTestCase4 {
     assertTrue(authFilter.requiresAuthentication("GET", "/endpoint"));
     assertFalse(authFilter.requiresAuthentication("GET", "/status"));
     assertTrue(authFilter.requiresAuthentication("PUT", "/status"));
-    assertFalse(authFilter.requiresAuthentication("GET", "/v2/api-docs"));
+    assertFalse(authFilter.requiresAuthentication("GET", "/v3/api-docs"));
     assertFalse(authFilter.requiresAuthentication("GET", "/swagger-ui.html"));
     assertFalse(authFilter.requiresAuthentication("GET",
 						  "/swagger-resources/foo"));
@@ -86,7 +86,7 @@ public class TestSpringAuthenticationFilter extends SpringLockssTestCase4 {
     assertTrue(authFilter.requiresIpAuthorization("GET", "/endpoint"));
     assertFalse(authFilter.requiresIpAuthorization("GET", "/status"));
     assertTrue(authFilter.requiresIpAuthorization("PUT", "/status"));
-    assertFalse(authFilter.requiresIpAuthorization("GET", "/v2/api-docs"));
+    assertFalse(authFilter.requiresIpAuthorization("GET", "/v3/api-docs"));
     assertFalse(authFilter.requiresIpAuthorization("GET", "/swagger-ui.html"));
     assertFalse(authFilter.requiresIpAuthorization("GET",
 						  "/swagger-resources/foo"));
