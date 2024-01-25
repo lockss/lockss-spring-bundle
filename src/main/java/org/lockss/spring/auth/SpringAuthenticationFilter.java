@@ -36,12 +36,10 @@ import java.security.AccessControlException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+
+import jakarta.servlet.*;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.lockss.account.*;
 import org.lockss.app.LockssDaemon;
@@ -201,7 +199,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
    */
   @Override
   public void doFilter(ServletRequest request, ServletResponse response,
-      FilterChain chain) throws IOException, ServletException {
+                       FilterChain chain) throws IOException, ServletException {
     log.debug2("Invoked {}.", this);
 
     HttpServletRequest httpRequest = (HttpServletRequest) request;
@@ -266,26 +264,16 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
     }
 
     // Check user credentials if required for this request
-    try {
-      if (!isAuthenticationOn()) {
-	// If authentication is disabled, set the authenticated principal
-        // to one with maximum capabilities
-	log.trace("Authorization is disabled");
+    if (!isAuthenticationOn()) {
+      // If authentication is disabled, set the authenticated principal
+      // to one with maximum capabilities
+      log.trace("Authorization is disabled");
 
-        SecurityContextHolder.getContext().setAuthentication(
-            getPrivilegedUnauthenticatedUserToken());
+      SecurityContextHolder.getContext().setAuthentication(
+          getPrivilegedUnauthenticatedUserToken());
 
-        // Continue the chain.
-        chain.doFilter(request, response);
-        return;
-      }
-    } catch (AccessControlException ace) {
-      // Report the configuration problem.
-      String message = ace.getMessage();
-      log.error(message);
-
-      SecurityContextHolder.clearContext();
-      httpResponse.sendError(HttpServletResponse.SC_FORBIDDEN, message);
+      // Continue the chain.
+      chain.doFilter(request, response);
       return;
     }
 
@@ -580,7 +568,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
    * @param request the ServletRequest
    */
   WebApplicationContext getApplicationContext(ServletRequest request) {
-    javax.servlet.ServletContext sc = request.getServletContext();
+    ServletContext sc = request.getServletContext();
     return WebApplicationContextUtils.getWebApplicationContext(sc);
   }
 

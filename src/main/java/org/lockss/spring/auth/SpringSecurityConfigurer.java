@@ -39,9 +39,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.EventListener;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.security.web.firewall.DefaultHttpFirewall;
 import org.springframework.security.web.firewall.HttpFirewall;
@@ -52,7 +52,7 @@ import org.springframework.security.web.firewall.HttpFirewall;
 @Configuration
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(prePostEnabled = true)
-public class SpringSecurityConfigurer extends WebSecurityConfigurerAdapter {
+public class SpringSecurityConfigurer {
 
   private final static L4JLogger log = L4JLogger.getLogger();
 
@@ -88,9 +88,9 @@ public class SpringSecurityConfigurer extends WebSecurityConfigurerAdapter {
     return firewall;
   }
 
-  @Override
-  public void configure(WebSecurity web) throws Exception {
-    web.httpFirewall(allowUrlEncodedSlashHttpFirewall());
+  @Bean
+  public WebSecurityCustomizer webSecurityCustomizer() {
+    return (web) -> web.httpFirewall(allowUrlEncodedSlashHttpFirewall());
   }
 
   /**
@@ -99,8 +99,8 @@ public class SpringSecurityConfigurer extends WebSecurityConfigurerAdapter {
    * @param http An HttpSecurity to be configured.
    * @throws Exception if there are problems.
    */
-  @Override
-  protected void configure(HttpSecurity http) throws Exception {
+  @Bean
+  public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
     log.debug2("Invoked.");
 
     // Force each and every request to be authenticated.
@@ -112,5 +112,7 @@ public class SpringSecurityConfigurer extends WebSecurityConfigurerAdapter {
     http.addFilterBefore(authFilter,
         BasicAuthenticationFilter.class);
     log.debug2("Done.");
+
+    return http.build();
   }
 }
