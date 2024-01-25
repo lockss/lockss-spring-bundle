@@ -470,8 +470,9 @@ public abstract class SpringLockssTestCase4 extends LockssTestCase4 {
 	.exchange(url, HttpMethod.GET, null, String.class);
 
     // Check the status.
-    HttpStatus statusCode = successResponse.getStatusCode();
-    assertEquals(HttpStatus.OK, statusCode);
+    HttpStatusCode statusCode = successResponse.getStatusCode();
+    HttpStatus status = HttpStatus.resolve(statusCode.value());
+    assertEquals(HttpStatus.OK, status);
 
     // Read the Swagger YAML configuration file.
     try (InputStream is = Thread.currentThread().getContextClassLoader()
