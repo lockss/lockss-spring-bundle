@@ -72,6 +72,14 @@ POSSIBILITY OF SUCH DAMAGE.
     </dependency>
 
     <dependency>
+      <groupId>org.lockss</groupId>
+      <artifactId>lockss-junit4-bundle</artifactId>
+      <version>${version.lockss.lockss-junit4-bundle}</version>
+      <type>pom</type>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-parent</artifactId>
       <version>${version.group.spring-boot}</version>
