@@ -133,6 +133,12 @@ POSSIBILITY OF SUCH DAMAGE.
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-activemq</artifactId>
       <version>${version.group.spring-boot}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.activemq</groupId>
+          <artifactId>activemq-client-jakarta</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>
