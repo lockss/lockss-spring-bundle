@@ -526,7 +526,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
     boolean result =
       "GET".equals(httpMethodName)
       && ("/status".equals(requestUri)
-	  || "/v2/api-docs".equals(requestUri)
+	  || "/v3/api-docs".equals(requestUri)
 	  || "/swagger-ui.html".equals(requestUri)
 	  || requestUri.startsWith("/swagger-resources")
 	  || requestUri.startsWith("/webjars/springfox-swagger-ui")) ;
