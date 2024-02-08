@@ -35,8 +35,11 @@ import org.lockss.log.L4JLogger;
 import org.lockss.spring.converter.LockssHttpEntityMethodProcessor;
 import org.lockss.spring.error.SpringControllerAdvice;
 import org.lockss.util.rest.multipart.MultipartMessageHttpMessageConverter;
+import org.lockss.util.time.TimeBase;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.http.HttpMessageConverters;
+import org.springframework.boot.web.error.ErrorAttributeOptions;
+import org.springframework.boot.web.servlet.error.DefaultErrorAttributes;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -44,6 +47,7 @@ import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.support.AllEncompassingFormHttpMessageConverter;
 import org.springframework.web.accept.ContentNegotiationManager;
 import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.support.HandlerMethodReturnValueHandler;
 import org.springframework.web.method.support.HandlerMethodReturnValueHandlerComposite;
 import org.springframework.web.servlet.config.annotation.ContentNegotiationConfigurer;
@@ -56,6 +60,7 @@ import org.springframework.web.util.UrlPathHelper;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Base class for a Spring-Boot application.
@@ -91,6 +96,18 @@ public abstract class BaseSpringBootApplication {
    */
   @Configuration
   public static class SpringMvcCustomization extends WebMvcConfigurerAdapter {
+    @Bean
+    public DefaultErrorAttributes errorAttributes() {
+      return new DefaultErrorAttributes() {
+        @Override
+        public Map<String, Object> getErrorAttributes(WebRequest webRequest, ErrorAttributeOptions options) {
+          Map<String, Object> attributes = super.getErrorAttributes(webRequest, options);
+          attributes.remove("timestamp");
+          attributes.put("timestamp", TimeBase.nowMs());
+          return attributes;
+        }
+      };
+    }
 
     @Override
     public void configurePathMatch(PathMatchConfigurer configurer) {
