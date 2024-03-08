@@ -57,6 +57,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExc
 import org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
 import org.springframework.web.util.UrlPathHelper;
+import org.apache.catalina.webresources.TomcatURLStreamHandlerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -89,6 +90,18 @@ public abstract class BaseSpringBootApplication {
   @ControllerAdvice
   public static class BaseServiceControllerAdvice extends SpringControllerAdvice {
     // Intentionally left blank
+  }
+
+  @Configuration
+  /** Add LOCKSS URLStreamHandlerFactory to Tomcat's list of user
+   * factories,  This will also prevent UrlManager from calling
+   * URL.setURLStreamHandlerFactory() */
+  public static class SetupUrlStreamHandlerFactory {
+    @Bean
+    public java.net.URLStreamHandlerFactory doit() {
+    TomcatURLStreamHandlerFactory.getInstance().addUserFactory(new org.lockss.daemon.UrlManager.LockssUrlFactory());
+    return null;
+    }
   }
 
   /**
