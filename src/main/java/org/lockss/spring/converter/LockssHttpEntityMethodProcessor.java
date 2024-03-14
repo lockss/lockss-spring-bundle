@@ -561,8 +561,8 @@ public class LockssHttpEntityMethodProcessor extends AbstractMessageConverterMet
 		}
 
 		if (outputValue != null) {
-			// FIXME
-			throw new HttpMediaTypeNotAcceptableException("FIXME");
+			// FIXME: Was throw new HttpMediaTypeNotAcceptableException(this.allSupportedMediaTypes);
+			throw new HttpMediaTypeNotAcceptableException("FIXME: Could not write message");
 		}
 	}
 }
