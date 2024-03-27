@@ -107,6 +107,7 @@ public abstract class BaseSpringBootApplication {
   /**
    * Modifier of the behavior of standard Spring MVC.
    */
+  // FIXME: This was a mistake; revert (and make sure to update our clients)
   @Configuration
   public static class SpringMvcCustomization implements WebMvcConfigurer {
     @Bean
