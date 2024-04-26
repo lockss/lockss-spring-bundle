@@ -30,6 +30,7 @@
 
 package org.lockss.spring.error;
 
+import org.apache.tomcat.util.http.fileupload.MultipartStream;
 import org.lockss.log.L4JLogger;
 import org.lockss.util.rest.RestResponseErrorBody;
 import org.springframework.http.HttpHeaders;
@@ -78,6 +79,18 @@ public class SpringControllerAdvice {
       new RestResponseErrorBody.RestResponseError(e.getMessage(),
                                                   e.getClass().toString());
     return new ResponseEntity<>(rre, headers, HttpStatus.NOT_IMPLEMENTED);
+  }
+
+  @ExceptionHandler(MultipartStream.MalformedStreamException.class)
+  public ResponseEntity<RestResponseErrorBody.RestResponseError> handler(MultipartStream.MalformedStreamException e) {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+
+    RestResponseErrorBody.RestResponseError rre =
+        new RestResponseErrorBody.RestResponseError(e.getMessage(),
+            e.getClass().toString());
+
+    return new ResponseEntity<>(rre, headers, HttpStatus.BAD_REQUEST);
   }
 
   /**
