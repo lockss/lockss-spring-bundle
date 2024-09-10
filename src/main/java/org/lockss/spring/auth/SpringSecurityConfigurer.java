@@ -31,17 +31,25 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 package org.lockss.spring.auth;
 
+import org.lockss.account.AccountManager;
 import org.lockss.log.L4JLogger;
 import org.lockss.app.LockssDaemon;
 import org.lockss.config.ConfigManager;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.EventListener;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.security.web.firewall.DefaultHttpFirewall;
 import org.springframework.security.web.firewall.HttpFirewall;
@@ -52,7 +60,7 @@ import org.springframework.security.web.firewall.HttpFirewall;
 @Configuration
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(prePostEnabled = true)
-public class SpringSecurityConfigurer extends WebSecurityConfigurerAdapter {
+public class SpringSecurityConfigurer {
 
   private final static L4JLogger log = L4JLogger.getLogger();
 
@@ -78,7 +86,7 @@ public class SpringSecurityConfigurer extends WebSecurityConfigurerAdapter {
 
   /**
    * Allows through encoded slashes in URLs.
-   * 
+   *
    * @return an HttpFirewall set up to allow through encoded slashes in URLs.
    */
   @Bean
@@ -88,9 +96,9 @@ public class SpringSecurityConfigurer extends WebSecurityConfigurerAdapter {
     return firewall;
   }
 
-  @Override
-  public void configure(WebSecurity web) throws Exception {
-    web.httpFirewall(allowUrlEncodedSlashHttpFirewall());
+  @Bean
+  public WebSecurityCustomizer webSecurityCustomizer() {
+    return (web) -> web.httpFirewall(allowUrlEncodedSlashHttpFirewall());
   }
 
   /**
@@ -99,8 +107,8 @@ public class SpringSecurityConfigurer extends WebSecurityConfigurerAdapter {
    * @param http An HttpSecurity to be configured.
    * @throws Exception if there are problems.
    */
-  @Override
-  protected void configure(HttpSecurity http) throws Exception {
+  @Bean
+  public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
     log.debug2("Invoked.");
 
     // Force each and every request to be authenticated.
@@ -112,5 +120,38 @@ public class SpringSecurityConfigurer extends WebSecurityConfigurerAdapter {
     http.addFilterBefore(authFilter,
         BasicAuthenticationFilter.class);
     log.debug2("Done.");
+
+    return http.build();
   }
+
+  /**
+   * This {@link AuthenticationManager} was introduced to suppress the generation of a default password,
+   * since excluding {@link SecurityAutoConfiguration} does not appear to work. This is a temporary fix.
+   * According to the Spring Security Architecture documentation, an {@link AuthenticationManager} that
+   * returns {@code null} was unable to decide the authentication of the {@link Authentication} request.
+   * <p>
+   * Our authentication is currently handled by a {@link SecurityFilterChain} customized with our
+   * {@link SpringAuthenticationFilter}, which defers user authentication to the LOCKSS
+   * {@link AccountManager} infrastructure. We should consider refactoring portions of the filter into a
+   * custom {@link AuthenticationProvider} or {@link UserDetailsService} to better align with Spring.
+   *
+   * @see AuthenticationManager
+   * @see ProviderManager
+   * @see AuthenticationProvider
+   * @see UserDetailsService
+   * @see SpringAuthenticationFilter
+   * @see AccountManager
+   */
+  @Bean
+  public AuthenticationManager authenticationManager() {
+    return new UndecidedAuthenticationManager();
+  }
+
+  private class UndecidedAuthenticationManager implements AuthenticationManager {
+    @Override
+    public Authentication authenticate(Authentication authentication) throws AuthenticationException {
+      log.warn("Invoked an AuthenticationManager that was not intended to be used", new Throwable());
+      return null;
+    }
+  };
 }

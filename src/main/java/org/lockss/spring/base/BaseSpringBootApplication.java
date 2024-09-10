@@ -35,8 +35,11 @@ import org.lockss.log.L4JLogger;
 import org.lockss.spring.converter.LockssHttpEntityMethodProcessor;
 import org.lockss.spring.error.SpringControllerAdvice;
 import org.lockss.util.rest.multipart.MultipartMessageHttpMessageConverter;
+import org.lockss.util.time.TimeBase;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.web.HttpMessageConverters;
+import org.springframework.boot.autoconfigure.http.HttpMessageConverters;
+import org.springframework.boot.web.error.ErrorAttributeOptions;
+import org.springframework.boot.web.servlet.error.DefaultErrorAttributes;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -44,18 +47,21 @@ import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.support.AllEncompassingFormHttpMessageConverter;
 import org.springframework.web.accept.ContentNegotiationManager;
 import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.support.HandlerMethodReturnValueHandler;
 import org.springframework.web.method.support.HandlerMethodReturnValueHandlerComposite;
 import org.springframework.web.servlet.config.annotation.ContentNegotiationConfigurer;
 import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver;
 import org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
 import org.springframework.web.util.UrlPathHelper;
+import org.apache.catalina.webresources.TomcatURLStreamHandlerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Base class for a Spring-Boot application.
@@ -86,11 +92,36 @@ public abstract class BaseSpringBootApplication {
     // Intentionally left blank
   }
 
+  @Configuration
+  /** Add LOCKSS URLStreamHandlerFactory to Tomcat's list of user
+   * factories,  This will also prevent UrlManager from calling
+   * URL.setURLStreamHandlerFactory() */
+  public static class SetupUrlStreamHandlerFactory {
+    @Bean
+    public java.net.URLStreamHandlerFactory doit() {
+    TomcatURLStreamHandlerFactory.getInstance().addUserFactory(new org.lockss.daemon.UrlManager.LockssUrlFactory());
+    return null;
+    }
+  }
+
   /**
    * Modifier of the behavior of standard Spring MVC.
    */
+  // FIXME: This was a mistake; revert (and make sure to update our clients)
   @Configuration
-  public static class SpringMvcCustomization extends WebMvcConfigurerAdapter {
+  public static class SpringMvcCustomization implements WebMvcConfigurer {
+    @Bean
+    public DefaultErrorAttributes errorAttributes() {
+      return new DefaultErrorAttributes() {
+        @Override
+        public Map<String, Object> getErrorAttributes(WebRequest webRequest, ErrorAttributeOptions options) {
+          Map<String, Object> attributes = super.getErrorAttributes(webRequest, options);
+          attributes.remove("timestamp");
+          attributes.put("timestamp", TimeBase.nowMs());
+          return attributes;
+        }
+      };
+    }
 
     @Override
     public void configurePathMatch(PathMatchConfigurer configurer) {
@@ -122,10 +153,10 @@ public abstract class BaseSpringBootApplication {
           .ignoreUnknownPathExtensions(false);
     }
 
-    @Bean
-    public ExceptionHandlerExceptionResolver createLockssExceptionHandlerExceptionResolver() {
-      return new LockssExceptionHandlerExceptionResolver();
-    }
+//    @Bean
+//    public ExceptionHandlerExceptionResolver createLockssExceptionHandlerExceptionResolver() {
+//      return new LockssExceptionHandlerExceptionResolver();
+//    }
 
 //    @Bean
 //    public RequestMappingHandlerAdapter createLockssRequestMappingHandlerAdapter(
@@ -144,15 +175,15 @@ public abstract class BaseSpringBootApplication {
 //      return adapter;
 //    }
 
-    @Bean
-    public RequestMappingHandlerAdapter modifyRequestMappingHandlerAdapter(RequestMappingHandlerAdapter adapter) {
-
-      adapter.setReturnValueHandlers(
-          substituteHttpEntityMethodProcessor(adapter.getReturnValueHandlers(), adapter.getMessageConverters())
-      );
-
-      return adapter;
-    }
+//    @Bean
+//    public RequestMappingHandlerAdapter modifyRequestMappingHandlerAdapter(RequestMappingHandlerAdapter adapter) {
+//
+//      adapter.setReturnValueHandlers(
+//          substituteHttpEntityMethodProcessor(adapter.getReturnValueHandlers(), adapter.getMessageConverters())
+//      );
+//
+//      return adapter;
+//    }
 
     private class LockssExceptionHandlerExceptionResolver extends ExceptionHandlerExceptionResolver {
       @Autowired

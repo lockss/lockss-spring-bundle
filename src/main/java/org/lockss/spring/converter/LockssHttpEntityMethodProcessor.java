@@ -51,6 +51,7 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.*;
 
+import org.lockss.util.SetUtil;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.ResolvableType;
 import org.springframework.http.*;
@@ -74,7 +75,7 @@ import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.servlet.mvc.method.annotation.*;
 import org.springframework.web.util.UrlPathHelper;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * This class was created with code from {@link HttpEntityMethodProcessor} and the portions of
@@ -86,7 +87,8 @@ public class LockssHttpEntityMethodProcessor extends AbstractMessageConverterMet
 
 	// The following code is from HttpEntityMethodProcessor
 
-	private static final Set<HttpMethod> SAFE_METHODS = EnumSet.of(HttpMethod.GET, HttpMethod.HEAD);
+	private static final Set<HttpMethod> SAFE_METHODS =
+			SetUtil.set(HttpMethod.GET, HttpMethod.HEAD);
 
 	private ContentNegotiationManager contentNegotiationManager = null;
 	private PathExtensionContentNegotiationStrategy pathStrategy;
@@ -559,7 +561,8 @@ public class LockssHttpEntityMethodProcessor extends AbstractMessageConverterMet
 		}
 
 		if (outputValue != null) {
-			throw new HttpMediaTypeNotAcceptableException(this.allSupportedMediaTypes);
+			// FIXME: Was throw new HttpMediaTypeNotAcceptableException(this.allSupportedMediaTypes);
+			throw new HttpMediaTypeNotAcceptableException("FIXME: Could not write message");
 		}
 	}
 }

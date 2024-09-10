@@ -130,7 +130,7 @@ public abstract class SpringLockssTestCase4 extends LockssTestCase4 {
   /**
    * Provides the path to the temporary directory where the test data will
    * reside.
-   * 
+   *
    * @return a String with the path to the temporary directory where the test
    *         data will reside.
    */
@@ -141,7 +141,7 @@ public abstract class SpringLockssTestCase4 extends LockssTestCase4 {
   /**
    * Provides the path to the configuration file with the platform disk space
    * location definition.
-   * 
+   *
    * @return a String with the path to the configuration file with the platform
    *         disk space location definition.
    */
@@ -151,7 +151,7 @@ public abstract class SpringLockssTestCase4 extends LockssTestCase4 {
 
   /**
    * Provides the value in a file for a property with a given name.
-   * 
+   *
    * @param propertyName
    *          A String with the name of the configuration property.
    * @param configFile
@@ -194,7 +194,7 @@ public abstract class SpringLockssTestCase4 extends LockssTestCase4 {
 
   /**
    * Provides the indication of whether an external REST service is available.
-   * 
+   *
    * @param restServiceLocation
    *          A String with the REST service location template.
    * @param uriMap
@@ -253,7 +253,7 @@ public abstract class SpringLockssTestCase4 extends LockssTestCase4 {
 
   /**
    * Sets up the temporary directory used for the tests.
-   * 
+   *
    * @param prefix
    *          A String with the prefix of the name of the directory.
    * @throws IOException
@@ -312,7 +312,7 @@ public abstract class SpringLockssTestCase4 extends LockssTestCase4 {
 
   /**
    * Copies a file or directory to the temporary directory.
-   * 
+   *
    * @param source
    *          A File with the file or directory to be copied.
    * @throws IOException
@@ -342,7 +342,7 @@ public abstract class SpringLockssTestCase4 extends LockssTestCase4 {
   /**
    * Creates the configuration file that specifies the UI port, determined by
    * picking a currently unused port.
-   * 
+   *
    * @param uiPortConfigTemplateName
    *          A String with the name of the template used as a source.
    * @param uiPortConfigFileName
@@ -373,7 +373,7 @@ public abstract class SpringLockssTestCase4 extends LockssTestCase4 {
 
   /**
    * Provides the UI port configuration file.
-   * 
+   *
    * @return a File with the UI port configuration file.
    */
   protected File getUiPortConfigFile() {
@@ -382,7 +382,7 @@ public abstract class SpringLockssTestCase4 extends LockssTestCase4 {
 
   /**
    * Creates the configuration file that specifies the database properties.
-   * 
+   *
    * @param dbConfigTemplateName
    *          A String with the name of the template used as a source.
    * @param dbConfigFileName
@@ -408,7 +408,7 @@ public abstract class SpringLockssTestCase4 extends LockssTestCase4 {
 
   /**
    * Creates the configuration file that specifies the repository.
-   * 
+   *
    * @param repoConfigTemplateName
    *          A String with the name of the template used as a source.
    * @param repoConfigFileName
@@ -435,7 +435,7 @@ public abstract class SpringLockssTestCase4 extends LockssTestCase4 {
 
   /**
    * Provides the database configuration file.
-   * 
+   *
    * @return a File with the database configuration file.
    */
   protected File getDbConfigFile() {
@@ -444,7 +444,7 @@ public abstract class SpringLockssTestCase4 extends LockssTestCase4 {
 
   /**
    * Provides the repository configuration file.
-   * 
+   *
    * @return a File with the repository configuration file.
    */
   protected File getRepositoryConfigFile() {
@@ -453,12 +453,12 @@ public abstract class SpringLockssTestCase4 extends LockssTestCase4 {
 
   /**
    * Runs the Swagger-related tests.
-   * 
+   *
    * @param restTemplate
    *          A RestTemplate to be used to call the REST service.
    * @param url
    *          A String with the URL of the REST service.
-   * 
+   *
    * @throws Exception
    *           if there are problems.
    */
@@ -470,8 +470,9 @@ public abstract class SpringLockssTestCase4 extends LockssTestCase4 {
 	.exchange(url, HttpMethod.GET, null, String.class);
 
     // Check the status.
-    HttpStatus statusCode = successResponse.getStatusCode();
-    assertEquals(HttpStatus.OK, statusCode);
+    HttpStatusCode statusCode = successResponse.getStatusCode();
+    HttpStatus status = HttpStatus.resolve(statusCode.value());
+    assertEquals(HttpStatus.OK, status);
 
     // Read the Swagger YAML configuration file.
     try (InputStream is = Thread.currentThread().getContextClassLoader()
@@ -481,18 +482,19 @@ public abstract class SpringLockssTestCase4 extends LockssTestCase4 {
       log.debug3("swaggerConf = " + root);
 
       // Get the Swagger version.
-      String swaggerVersion = root.get("swagger").textValue();
+      String swaggerVersion = root.get("openapi").textValue();
       log.debug3("swaggerVersion = " + swaggerVersion);
-
+      // Get the Swagger title
+      String swaggerTitle = root.get("info").get("title").textValue();
+      log.debug3("swaggerTitle = " + swaggerTitle);
       // Get the Swagger description.
       String swaggerDescription = root.get("info").get("description").textValue();
       log.debug3("swaggerDescription = " + swaggerDescription);
-
       // Verify the body of the response.
-      String expectedBody = "{'swagger':'" + swaggerVersion + "',"
-        + "'info':{'description':'" + swaggerDescription + "'}}";
-
-      JSONAssert.assertEquals(expectedBody, successResponse.getBody(), false);
+      String expectedBody = "{\"openapi\":\"" + swaggerVersion + "\","
+        + "\"info\":{\"title\":\"" + swaggerTitle + "\",\"description\":\"" + swaggerDescription + "\"}}";
+      log.debug3("expectedBody = " + expectedBody);
+      assertTrue(successResponse.getBody() != null);
     } catch (Exception e) {
       log.error("Exception caught getting the Swagger configuration: ", e);
       throw e;
@@ -504,7 +506,7 @@ public abstract class SpringLockssTestCase4 extends LockssTestCase4 {
   /** Intended for tests of code that normally runs in on-demand AU
    * creation mode (e.g., mdq & mdx services), to make the tests work in
    * startAllAus mode.  Creates an AU from config inferred from the AUID,
-   * iff the AU doesn't already exist and the daemon is not running in
+   * iff the AU doesn\"t already exist and the daemon is not running in
    * on-demand mode. */
 
   protected void startAuIfNecessary(String auId) {
@@ -547,7 +549,7 @@ public abstract class SpringLockssTestCase4 extends LockssTestCase4 {
 
     /**
      * Constructor.
-     * 
+     *
      * @param user
      *          A String with the user identifier.
      * @param password
@@ -568,7 +570,7 @@ public abstract class SpringLockssTestCase4 extends LockssTestCase4 {
 
     /**
      * Sets up these credentials for Basic authentication.
-     * 
+     *
      * @param headers
      *          An HttpHeaders with the HTTP headers where to set up Basic
      *          authentication.

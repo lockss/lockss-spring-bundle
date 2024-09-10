@@ -36,12 +36,10 @@ import java.security.AccessControlException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+
+import jakarta.servlet.*;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.lockss.account.*;
 import org.lockss.app.LockssDaemon;
@@ -59,6 +57,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.GenericFilterBean;
 import org.springframework.web.context.*;
 import org.springframework.web.context.support.WebApplicationContextUtils;
+import org.springframework.web.util.UriComponents;
+import org.springframework.web.util.UriComponentsBuilder;
 
 /**
  * Default LOCKSS custom Spring authentication filter.
@@ -179,6 +179,15 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
     return m.matches() ? m.group(1) : ipaddr;
   }
 
+  Pattern IP_PROTECTED_PATHS = Pattern.compile("^/(usernames|users).*");
+
+  protected boolean isRestrictedPath(String reqUri) {
+    UriComponents reqUriComponents =
+        UriComponentsBuilder.fromUriString(reqUri).build();
+
+    return IP_PROTECTED_PATHS.matcher(reqUriComponents.getPath()).matches();
+  }
+
   /**
    * Authentication filter.
    *
@@ -190,7 +199,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
    */
   @Override
   public void doFilter(ServletRequest request, ServletResponse response,
-      FilterChain chain) throws IOException, ServletException {
+                       FilterChain chain) throws IOException, ServletException {
     log.debug2("Invoked {}.", this);
 
     HttpServletRequest httpRequest = (HttpServletRequest) request;
@@ -206,6 +215,9 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
     }
 
     String reqUri = httpRequest.getRequestURI();
+
+    boolean isRestrictedPath = isRestrictedPath(reqUri);
+
     HttpServletResponse httpResponse = (HttpServletResponse) response;
 
     // Check source IP addr if IP auth is required for this request
@@ -221,7 +233,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
 	}
       }
       try {
-	if (!isIpAuthorized(srcIp)) {
+	if (!isIpAuthorized(srcIp, isRestrictedPath)) {
 	  // The IP is NOT allowed
 	  if (logForbidden) {
 	    log.info("Access to {} forbidden from {}", reqUri, srcIp);
@@ -232,7 +244,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
 	String forwardedFor = httpRequest.getHeader("X-Forwarded-For");
 	if (!StringUtils.isEmpty(forwardedFor)) {
 	  String mostRecentIp = stripBrackets(lastElement(forwardedFor));
-	  if (!isIpAuthorized(mostRecentIp)) {
+	  if (!isIpAuthorized(mostRecentIp, isRestrictedPath)) {
 	    // The IP is NOT allowed
 	    if (logForbidden) {
 	      log.info("Access to {} forbidden for request forwarded from {}",
@@ -252,26 +264,16 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
     }
 
     // Check user credentials if required for this request
-    try {
-      if (!isAuthenticationOn()) {
-	// If authentication is disabled, set the authenticated principal
-        // to one with maximum capabilities
-	log.trace("Authorization is disabled");
+    if (!isAuthenticationOn()) {
+      // If authentication is disabled, set the authenticated principal
+      // to one with maximum capabilities
+      log.trace("Authorization is disabled");
 
-        SecurityContextHolder.getContext().setAuthentication(
-            getPrivilegedUnauthenticatedUserToken());
+      SecurityContextHolder.getContext().setAuthentication(
+          getPrivilegedUnauthenticatedUserToken());
 
-        // Continue the chain.
-        chain.doFilter(request, response);
-        return;
-      }
-    } catch (AccessControlException ace) {
-      // Report the configuration problem.
-      String message = ace.getMessage();
-      log.error(message);
-
-      SecurityContextHolder.clearContext();
-      httpResponse.sendError(HttpServletResponse.SC_FORBIDDEN, message);
+      // Continue the chain.
+      chain.doFilter(request, response);
       return;
     }
 
@@ -403,8 +405,12 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
 
   /** Return true if the IP address is allowed by the IP access filters */
   boolean isIpAuthorized(String ip) throws IpFilter.MalformedException {
-    return (ipFilter != null && ipFilter.isIpAllowed(ip) ||
-	    (allowLocal && localFilter.isIpAllowed(ip)));
+    return isIpAuthorized(ip, false);
+  }
+
+  boolean isIpAuthorized(String ip, boolean isRestrictedPath) throws IpFilter.MalformedException {
+    return ((ipFilter != null && !isRestrictedPath && ipFilter.isIpAllowed(ip)) ||
+        (allowLocal && localFilter.isIpAllowed(ip)));
   }
 
   /** Send 503 Serice Unavailable, with a reason */
@@ -520,7 +526,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
     boolean result =
       "GET".equals(httpMethodName)
       && ("/status".equals(requestUri)
-	  || "/v2/api-docs".equals(requestUri)
+	  || "/v3/api-docs".equals(requestUri)
 	  || "/swagger-ui.html".equals(requestUri)
 	  || requestUri.startsWith("/swagger-resources")
 	  || requestUri.startsWith("/webjars/springfox-swagger-ui")) ;
@@ -562,7 +568,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
    * @param request the ServletRequest
    */
   WebApplicationContext getApplicationContext(ServletRequest request) {
-    javax.servlet.ServletContext sc = request.getServletContext();
+    ServletContext sc = request.getServletContext();
     return WebApplicationContextUtils.getWebApplicationContext(sc);
   }
 

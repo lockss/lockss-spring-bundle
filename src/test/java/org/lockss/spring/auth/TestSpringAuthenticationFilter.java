@@ -28,14 +28,17 @@
 package org.lockss.spring.auth;
 
 import org.junit.*;
+import org.junit.runner.RunWith;
 import org.lockss.spring.test.SpringLockssTestCase4;
 import org.lockss.config.*;
 import org.lockss.log.*;
 import org.lockss.test.ConfigurationUtil;
+import org.springframework.test.context.junit4.SpringRunner;
 
 /**
  * Test class for org.lockss.spring.auth.SpringAuthenticationFilter
  */
+@RunWith(SpringRunner.class)
 public class TestSpringAuthenticationFilter extends SpringLockssTestCase4 {
   L4JLogger log = L4JLogger.getLogger();
 
@@ -65,7 +68,7 @@ public class TestSpringAuthenticationFilter extends SpringLockssTestCase4 {
     assertTrue(authFilter.requiresAuthentication("GET", "/endpoint"));
     assertFalse(authFilter.requiresAuthentication("GET", "/status"));
     assertTrue(authFilter.requiresAuthentication("PUT", "/status"));
-    assertFalse(authFilter.requiresAuthentication("GET", "/v2/api-docs"));
+    assertFalse(authFilter.requiresAuthentication("GET", "/v3/api-docs"));
     assertFalse(authFilter.requiresAuthentication("GET", "/swagger-ui.html"));
     assertFalse(authFilter.requiresAuthentication("GET",
 						  "/swagger-resources/foo"));
@@ -83,7 +86,7 @@ public class TestSpringAuthenticationFilter extends SpringLockssTestCase4 {
     assertTrue(authFilter.requiresIpAuthorization("GET", "/endpoint"));
     assertFalse(authFilter.requiresIpAuthorization("GET", "/status"));
     assertTrue(authFilter.requiresIpAuthorization("PUT", "/status"));
-    assertFalse(authFilter.requiresIpAuthorization("GET", "/v2/api-docs"));
+    assertFalse(authFilter.requiresIpAuthorization("GET", "/v3/api-docs"));
     assertFalse(authFilter.requiresIpAuthorization("GET", "/swagger-ui.html"));
     assertFalse(authFilter.requiresIpAuthorization("GET",
 						  "/swagger-resources/foo"));
@@ -117,12 +120,20 @@ public class TestSpringAuthenticationFilter extends SpringLockssTestCase4 {
     assertFalse(authFilter.isIpAuthorized("127.0.0.1"));
     assertFalse(authFilter.isIpAuthorized("44.55.66.77"));
 
+    assertFalse(authFilter.isIpAuthorized("1.2.3.4", true));
+    assertFalse(authFilter.isIpAuthorized("127.0.0.1", true));
+    assertFalse(authFilter.isIpAuthorized("44.55.66.77", true));
+
     ConfigurationUtil.addFromArgs(ConfigManager.PARAM_PLATFORM_CONTAINER_SUBNETS,
 				  "88.77.66.0/24",
 				  SpringAuthenticationFilter.PARAM_ALLOW_LOOPBACK,
 				  "true");
     assertTrue(authFilter.isIpAuthorized("127.0.0.1"));
     assertTrue(authFilter.isIpAuthorized("88.77.66.11"));
+
+    assertFalse(authFilter.isIpAuthorized("1.2.3.4", true));
+    assertTrue(authFilter.isIpAuthorized("127.0.0.1", true));
+    assertTrue(authFilter.isIpAuthorized("88.77.66.11", true));
   }
 
   @Test
@@ -132,4 +143,14 @@ public class TestSpringAuthenticationFilter extends SpringLockssTestCase4 {
     assertEquals("1.2.3.4", authFilter.lastElement("2.2.2.2,1.2.3.4 "));
   }
 
+
+  @Test
+  public void testIsRestrictedPath() throws Exception {
+    assertFalse(authFilter.isRestrictedPath("/xyzzy"));
+    assertTrue(authFilter.isRestrictedPath("/usernames"));
+    assertTrue(authFilter.isRestrictedPath("/usernames/"));
+    assertTrue(authFilter.isRestrictedPath("/users"));
+    assertTrue(authFilter.isRestrictedPath("/users/"));
+    assertTrue(authFilter.isRestrictedPath("/users/xyzzy"));
+  }
 }
