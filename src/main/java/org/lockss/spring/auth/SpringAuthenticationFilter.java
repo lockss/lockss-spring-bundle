@@ -431,7 +431,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
     httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED, msg);
   }
 
-  /** Send 401 Forbidden */
+  /** Send 403 Forbidden */
   private void sendForbidden(HttpServletResponse httpResponse, String msg)
       throws IOException {
     SecurityContextHolder.clearContext();
