@@ -39,7 +39,20 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.client.DefaultResponseErrorHandler;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurationSupport;
+import org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver;
 
+/**
+ * This class contains our custom error handlers. The default ones are still
+ * set through other mechanisms than through an @ErrorHandler annotation.
+ *
+ * See:
+ * * {@link DefaultResponseErrorHandler}
+ * * {@link ExceptionHandlerExceptionResolver}
+ * * {@link ExceptionHandlerExceptionResolver#addExceptionMapping}
+ * * {@link WebMvcConfigurationSupport#handlerExceptionResolver}
+ */
 @RequestMapping(produces = "application/vnd.error+json")
 public class SpringControllerAdvice {
 
