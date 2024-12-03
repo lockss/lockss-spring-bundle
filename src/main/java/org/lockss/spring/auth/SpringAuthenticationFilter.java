@@ -182,10 +182,12 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
   Pattern IP_PROTECTED_PATHS = Pattern.compile("^/(usernames|users).*");
 
   protected boolean isRestrictedPath(String reqUri) {
-    UriComponents reqUriComponents =
-        UriComponentsBuilder.fromUriString(reqUri).build();
+    // Disabled becuase prevents V1 migrator from copying user accounts to V2
+    return false;
+//     UriComponents reqUriComponents =
+//         UriComponentsBuilder.fromUriString(reqUri).build();
 
-    return IP_PROTECTED_PATHS.matcher(reqUriComponents.getPath()).matches();
+//     return IP_PROTECTED_PATHS.matcher(reqUriComponents.getPath()).matches();
   }
 
   /**
@@ -431,7 +433,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
     httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED, msg);
   }
 
-  /** Send 401 Forbidden */
+  /** Send 403 Forbidden */
   private void sendForbidden(HttpServletResponse httpResponse, String msg)
       throws IOException {
     SecurityContextHolder.clearContext();
