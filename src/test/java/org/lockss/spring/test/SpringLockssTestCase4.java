@@ -116,6 +116,10 @@ public abstract class SpringLockssTestCase4 extends LockssTestCase4 {
    * LockssTestCase4 does in that it passes the ApplicationContext to
    * ConfigManager, and arranges for an initial config load to appear to
    * have been done. */
+  // Beware - most/all the Spring services tests start the app, which
+  // will create a new ConfigManager.  DO NOT use ConfigurationUtil to
+  // set any config params here, or in those tests' @Before methods,
+  // or at any point before the app is started.
   @Override
   protected ConfigManager makeConfigManager() {
     ConfigManager mgr = ConfigManager.makeConfigManager(appCtx);
