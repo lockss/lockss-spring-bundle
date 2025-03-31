@@ -96,6 +96,9 @@ public abstract class SpringLockssTestCase4 extends LockssTestCase4 {
   @Autowired
   private ApplicationContext appCtx;
 
+  @Autowired(required = false)
+  private MockLockssDaemon mockLockssDaemon;
+
   // The path of a temporary directory where the test data will reside.
   private String tempDirPath = null;
 
@@ -111,6 +114,15 @@ public abstract class SpringLockssTestCase4 extends LockssTestCase4 {
 
   // The configuration file that specifies the repository.
   private File repoConfigFile = null;
+
+  @Override
+  protected MockLockssDaemon newMockLockssDaemon() {
+    if (mockLockssDaemon == null) {
+      return super.newMockLockssDaemon();
+    }
+    log.info("newMockLockssDaemon() returning already created MockLockssDaemon");
+    return mockLockssDaemon;
+  }
 
   /** Create a fresh config manager.  This differs from what
    * LockssTestCase4 does in that it passes the ApplicationContext to

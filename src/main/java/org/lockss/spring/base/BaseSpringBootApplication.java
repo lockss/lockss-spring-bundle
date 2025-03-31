@@ -31,6 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package org.lockss.spring.base;
 
+import org.lockss.app.LockssDaemon;
 import org.lockss.log.L4JLogger;
 import org.lockss.spring.converter.LockssHttpEntityMethodProcessor;
 import org.lockss.spring.error.SpringControllerAdvice;
@@ -72,6 +73,9 @@ public abstract class BaseSpringBootApplication {
 
   @Autowired
   private ApplicationContext appCtx;
+
+  @Autowired(required = false)
+  protected LockssDaemon lockssDaemon;
 
   /** make ApplicationContext available to subclasses */
   protected ApplicationContext getApplicationContext() {
