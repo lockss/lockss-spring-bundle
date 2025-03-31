@@ -32,6 +32,7 @@ package org.lockss.spring.error;
 
 import org.apache.tomcat.util.http.fileupload.MultipartStream;
 import org.lockss.log.L4JLogger;
+import org.lockss.util.JsonUtil;
 import org.lockss.util.rest.RestResponseErrorBody;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -104,6 +105,34 @@ public class SpringControllerAdvice {
             e.getClass().toString());
 
     return new ResponseEntity<>(rre, headers, HttpStatus.BAD_REQUEST);
+  }
+
+  @ExceptionHandler(InsufficientPermissionsException.class)
+  public ResponseEntity<RestResponseErrorBody.RestResponseError> handler(InsufficientPermissionsException e) {
+    log.warn(e.getMessage());
+    return getErrorResponseEntity(HttpStatus.FORBIDDEN, null, e);
+  }
+
+  private ResponseEntity<RestResponseErrorBody.RestResponseError> getErrorResponseEntity(HttpStatus status,
+                                                                                         String message, Exception e) {
+    String errorMessage = message;
+
+    if (e != null) {
+      if (errorMessage == null) {
+        errorMessage = e.getMessage();
+      } else {
+        errorMessage = errorMessage + " - " + e.getMessage();
+      }
+    }
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+
+    RestResponseErrorBody.RestResponseError rre =
+        new RestResponseErrorBody.RestResponseError(errorMessage,
+            e.getClass().toString());
+
+    return new ResponseEntity<>(rre, headers, status);
   }
 
   /**

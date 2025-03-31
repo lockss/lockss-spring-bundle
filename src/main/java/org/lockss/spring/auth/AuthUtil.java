@@ -27,9 +27,9 @@
  */
 package org.lockss.spring.auth;
 
-import java.security.AccessControlException;
 import java.util.*;
 import org.lockss.log.L4JLogger;
+import org.lockss.spring.error.InsufficientPermissionsException;
 import org.springframework.security.core.*;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -84,7 +84,7 @@ public class AuthUtil {
       // Yes: Normal users are not authorized.
       String message = "Unauthorized like any non-administrator";
       log.debug2(message);
-      throw new AccessControlException(message);
+      throw new InsufficientPermissionsException(message);
     }
 
     // Loop though all the permissible roles.
@@ -107,9 +107,10 @@ public class AuthUtil {
     // The user is not authorized because it does not have any of the
     // permissible roles.
     String message = "Unauthorized because user '" + userName
-        + "'does not have any of the permissible roles";
+        + "' does not have any of the permissible roles: " + Arrays.toString(permissibleRoles);
+
     log.debug2(message);
-    throw new AccessControlException(message);
+    throw new InsufficientPermissionsException(message);
   }
 
 }
