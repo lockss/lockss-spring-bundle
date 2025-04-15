@@ -32,7 +32,6 @@ package org.lockss.spring.error;
 
 import org.apache.tomcat.util.http.fileupload.MultipartStream;
 import org.lockss.log.L4JLogger;
-import org.lockss.util.JsonUtil;
 import org.lockss.util.rest.RestResponseErrorBody;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -47,6 +46,9 @@ import org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExc
 /**
  * This class contains our custom error handlers. The default ones are still
  * set through other mechanisms than through an @ErrorHandler annotation.
+ *
+ * Note: The @ExceptionHandlers can only be invoked for runtime exceptions
+ * because the generated code does not include a throws list.
  *
  * See:
  * * {@link DefaultResponseErrorHandler}
