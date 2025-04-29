@@ -97,18 +97,6 @@ public class SpringControllerAdvice {
     return new ResponseEntity<>(rre, headers, HttpStatus.NOT_IMPLEMENTED);
   }
 
-  @ExceptionHandler(MultipartStream.MalformedStreamException.class)
-  public ResponseEntity<RestResponseErrorBody.RestResponseError> handler(MultipartStream.MalformedStreamException e) {
-    HttpHeaders headers = new HttpHeaders();
-    headers.setContentType(MediaType.APPLICATION_JSON);
-
-    RestResponseErrorBody.RestResponseError rre =
-        new RestResponseErrorBody.RestResponseError(e.getMessage(),
-            e.getClass().toString());
-
-    return new ResponseEntity<>(rre, headers, HttpStatus.BAD_REQUEST);
-  }
-
   @ExceptionHandler(InsufficientPermissionsException.class)
   public ResponseEntity<RestResponseErrorBody.RestResponseError> handler(InsufficientPermissionsException e) {
     log.warn(e.getMessage());
