@@ -280,7 +280,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
     }
 
     // Does this request require an authenticated user
-    if (!requiresAuthentication(httpRequest)) {
+    if (!requiresAuthentication(srcIp, httpRequest)) {
 	// No, set the authenticated principal to one with minimal capabilities
       log.trace("Authentication not required for {}", reqUri);
 
@@ -470,8 +470,9 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
    * @param httpRequest A HttpServletRequest with the incoming request.
    * @return true if this request requires authentication, false otherwise.
    */
-  boolean requiresAuthentication(HttpServletRequest httpRequest) {
-    return requiresAuthentication(httpRequest.getMethod().toUpperCase(),
+  boolean requiresAuthentication(String srcIp, HttpServletRequest httpRequest) {
+    return requiresAuthentication(srcIp,
+                                  httpRequest.getMethod().toUpperCase(),
 				  httpRequest.getRequestURI().toLowerCase());
   }
 
@@ -482,18 +483,29 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
    * @param requestUri A String with the request URI.
    * @return true if this request requires authentication, false otherwise.
    */
-  boolean requiresAuthentication(String httpMethodName, String requestUri) {
-    log.trace("requiresAuthentication({}, {})", httpMethodName, requestUri);
-
-    boolean result = !isStatusOrDocFetch(httpMethodName, requestUri);
-
-    // Conditionally allow unauthenticated read requests
-    if (result && allowUnauthenticatedRead &&
-	isReadRequest(httpMethodName, requestUri)) {
-      result = false;
+  boolean requiresAuthentication(String srcIp,
+                                 String httpMethodName, String requestUri) {
+    if (isStatusOrDocFetch(httpMethodName, requestUri)) {
+      log.trace("Request for {} doesn't require authentication", requestUri);
+      return false;
     }
-    log.trace("result = {}", result);
-    return result;
+
+    // Conditionally allow unauthenticated read requests from local clients
+    try {
+      if (allowUnauthenticatedRead &&
+          isReadRequest(httpMethodName, requestUri) &&
+          localFilter.isIpAllowed(srcIp)) {
+        log.trace("Local GET from {} for {} doesn't require authentication",
+                  srcIp, requestUri);
+        return false;
+      }
+    } catch (IpFilter.MalformedException e) {
+      log.warn("requiresAuthentication() error, returning true", e);
+      return true;
+    }
+    log.trace("Request from {} for {} does require authentication",
+              srcIp, requestUri);
+    return true;
   }
 
   /**
