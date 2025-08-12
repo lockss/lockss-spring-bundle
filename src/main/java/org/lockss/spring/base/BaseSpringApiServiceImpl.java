@@ -33,7 +33,12 @@ package org.lockss.spring.base;
 
 import java.util.Map;
 import javax.jms.*;
+
+import org.lockss.account.UserAccount;
+import org.lockss.daemon.ShouldNotHappenException;
 import org.lockss.jms.*;
+import org.lockss.servlet.DebugPanel;
+import org.lockss.util.JsonUtil;
 import org.lockss.util.jms.*;
 
 import org.lockss.app.LockssDaemon;
@@ -49,6 +54,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 /**
@@ -412,4 +418,66 @@ public class BaseSpringApiServiceImpl {
     }
   }
 
+  /**
+   * Adds to the audit log a reference to this operation, if necessary.
+   *
+   * @param action
+   *          A String with the name of the operation.
+   * @param auId
+   *          A String with the identifier (auid) of the archival unit.
+   */
+  protected void audit(String action, String auId) {
+    log.debug2("action = {}", action);
+    log.debug2("auId = {}", auId);
+
+    String userName =
+        SecurityContextHolder.getContext().getAuthentication().getName();
+    log.trace("userName = {}", userName);
+
+    // Get the user account.
+    UserAccount userAccount = null;
+
+    try {
+      userAccount =
+          LockssDaemon.getLockssDaemon().getAccountManager().getUser(userName);
+      log.trace("userAccount = {}", userAccount);
+    } catch (Exception e) {
+      log.error("userName = {}", userName);
+      log.error("LockssDaemon.getLockssDaemon().getAccountManager()."
+          + "getUser(" + userName + ")", e);
+      throw new ShouldNotHappenException("Unable to get user '" + userName + "'");
+    }
+
+    if (userAccount != null && !DebugPanel.noAuditActions.contains(action)) {
+      userAccount.auditableEvent("Called AusApi web service operation '"
+          + action + "' AU ID: " + auId);
+    }
+  }
+
+  /**
+   * Provides the response entity when there is an error.
+   *
+   * @param status
+   *          An HttpStatus with the error HTTP status.
+   * @param message
+   *          A String with the error message.
+   * @param e
+   *          An Exception with theerror exception.
+   * @return a {@code ResponseEntity<String>} with the error response entity.
+   */
+  public static ResponseEntity<String> getErrorResponseEntity(HttpStatus status,
+                                                        String message, Exception e) {
+    String errorMessage = message;
+
+    if (e != null) {
+      if (errorMessage == null) {
+        errorMessage = e.getMessage();
+      } else {
+        errorMessage = errorMessage + " - " + e.getMessage();
+      }
+    }
+
+    return new ResponseEntity<String>(JsonUtil.toJsonError(status.value(),
+        errorMessage), status);
+  }
 }

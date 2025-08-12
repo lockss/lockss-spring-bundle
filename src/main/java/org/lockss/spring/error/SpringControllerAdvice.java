@@ -47,6 +47,9 @@ import org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExc
  * This class contains our custom error handlers. The default ones are still
  * set through other mechanisms than through an @ErrorHandler annotation.
  *
+ * Note: The @ExceptionHandlers can only be invoked for runtime exceptions
+ * because the generated code does not include a throws list.
+ *
  * See:
  * * {@link DefaultResponseErrorHandler}
  * * {@link ExceptionHandlerExceptionResolver}
@@ -94,16 +97,32 @@ public class SpringControllerAdvice {
     return new ResponseEntity<>(rre, headers, HttpStatus.NOT_IMPLEMENTED);
   }
 
-  @ExceptionHandler(MultipartStream.MalformedStreamException.class)
-  public ResponseEntity<RestResponseErrorBody.RestResponseError> handler(MultipartStream.MalformedStreamException e) {
+  @ExceptionHandler(InsufficientPermissionsException.class)
+  public ResponseEntity<RestResponseErrorBody.RestResponseError> handler(InsufficientPermissionsException e) {
+    log.warn(e.getMessage());
+    return getErrorResponseEntity(HttpStatus.FORBIDDEN, null, e);
+  }
+
+  private ResponseEntity<RestResponseErrorBody.RestResponseError> getErrorResponseEntity(HttpStatus status,
+                                                                                         String message, Exception e) {
+    String errorMessage = message;
+
+    if (e != null) {
+      if (errorMessage == null) {
+        errorMessage = e.getMessage();
+      } else {
+        errorMessage = errorMessage + " - " + e.getMessage();
+      }
+    }
+
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
 
     RestResponseErrorBody.RestResponseError rre =
-        new RestResponseErrorBody.RestResponseError(e.getMessage(),
+        new RestResponseErrorBody.RestResponseError(errorMessage,
             e.getClass().toString());
 
-    return new ResponseEntity<>(rre, headers, HttpStatus.BAD_REQUEST);
+    return new ResponseEntity<>(rre, headers, status);
   }
 
   /**
