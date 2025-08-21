@@ -279,11 +279,16 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
       return;
     }
 
-    // Does this request require an authenticated user
-    if (!requiresAuthentication(srcIp, httpRequest)) {
-	// No, set the authenticated principal to one with minimal capabilities
-      log.trace("Authentication not required for {}", reqUri);
+    // Get the authorization header.
+    String authorizationHeader = httpRequest.getHeader("authorization");
+    log.trace("authorizationHeader = {}", authorizationHeader);
 
+    // Allow some requests without auth
+    if (authorizationHeader == null &&
+        !requiresAuthentication(srcIp, httpRequest)) {
+      // Set the authenticated principal to one with minimal capabilities
+
+      log.trace("Authentication not supplied, and not required for {}", reqUri);
       SecurityContextHolder.getContext().setAuthentication(
           getUnprivilegedUnauthenticatedUserToken());
 
@@ -318,10 +323,6 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
 	return;
       }
     }
-
-    // Get the authorization header.
-    String authorizationHeader = httpRequest.getHeader("authorization");
-    log.trace("authorizationHeader = {}", authorizationHeader);
 
     if (authorizationHeader == null) {
       log.info(MISSING_AUTH_HEADER);
