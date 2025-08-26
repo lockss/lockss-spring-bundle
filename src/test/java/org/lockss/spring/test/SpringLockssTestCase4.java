@@ -146,12 +146,14 @@ public abstract class SpringLockssTestCase4 extends LockssTestCase4 {
   protected ConfigManager makeConfigManager() {
     ConfigManager cfgMgr = ConfigManager.makeConfigManager(appCtx);
 
-    ConfigurableEnvironment appCtxEnv = appCtx.getEnvironment();
-    MutablePropertySources propSrcs = appCtxEnv.getPropertySources();
+    if (appCtx != null) {
+      ConfigurableEnvironment appCtxEnv = appCtx.getEnvironment();
+      MutablePropertySources propSrcs = appCtxEnv.getPropertySources();
 
-    Map<String, Object> myMap = new HashMap<>();
-    myMap.put("LockssConfigManager", cfgMgr);
-    propSrcs.addFirst(new MapPropertySource("MY_MAP", myMap));
+      Map<String, Object> myMap = new HashMap<>();
+      myMap.put("LockssConfigManager", cfgMgr);
+      propSrcs.addFirst(new MapPropertySource("MY_MAP", myMap));
+    }
 
     // Some Spring components, and esp. SpringAuthenticationFilter, wait
     // for the config to be loaded.  Which, in a test environment, doesn't
