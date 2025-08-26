@@ -44,6 +44,7 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import org.lockss.app.LockssDaemon;
@@ -57,9 +58,11 @@ import org.lockss.util.TemplateUtil;
 import org.lockss.util.auth.*;
 import org.lockss.util.rest.RestUtil;
 import org.lockss.test.*;
-import org.skyscreamer.jsonassert.JSONAssert;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.env.MapPropertySource;
+import org.springframework.core.env.MutablePropertySources;
 import org.springframework.http.*;
 import org.springframework.util.FileCopyUtils;
 import org.springframework.util.FileSystemUtils;
@@ -80,6 +83,9 @@ public abstract class SpringLockssTestCase4 extends LockssTestCase4 {
   public static final String PLATFORM_DISK_SPACE_CONFIG_FILENAME =
       "platform.txt";
 
+  public static final String MISC_CONFIG_FILENAME =
+      "misc.txt";
+
   /**
    * The name of the file with the UI port configuration template.
    */
@@ -94,7 +100,7 @@ public abstract class SpringLockssTestCase4 extends LockssTestCase4 {
   private static final Logger log = Logger.getLogger();
 
   @Autowired
-  private ApplicationContext appCtx;
+  private ConfigurableApplicationContext appCtx;
 
   @Autowired(required = false)
   private MockLockssDaemon mockLockssDaemon;
@@ -105,6 +111,10 @@ public abstract class SpringLockssTestCase4 extends LockssTestCase4 {
   // The path to the configuration file with the platform disk space location
   // definition.
   private String platformDiskSpaceConfigPath = null;
+
+  // The path to the configuration file with miscellaneous configuration parameters
+  private String miscConfigPath;
+
 
   // The configuration file that specifies the UI port.
   private File uiPortConfigFile = null;
@@ -134,13 +144,21 @@ public abstract class SpringLockssTestCase4 extends LockssTestCase4 {
   // or at any point before the app is started.
   @Override
   protected ConfigManager makeConfigManager() {
-    ConfigManager mgr = ConfigManager.makeConfigManager(appCtx);
+    ConfigManager cfgMgr = ConfigManager.makeConfigManager(appCtx);
+
+    ConfigurableEnvironment appCtxEnv = appCtx.getEnvironment();
+    MutablePropertySources propSrcs = appCtxEnv.getPropertySources();
+
+    Map<String, Object> myMap = new HashMap<>();
+    myMap.put("LockssConfigManager", cfgMgr);
+    propSrcs.addFirst(new MapPropertySource("MY_MAP", myMap));
+
     // Some Spring components, and esp. SpringAuthenticationFilter, wait
     // for the config to be loaded.  Which, in a test environment, doesn't
     // happen automatically.  Install an empty config so that all the
     // callbacks get called and waitConfig() returns.
     ConfigurationUtil.installConfig(ConfigManager.newConfiguration());
-    return mgr;
+    return cfgMgr;
   }
 
   /**
@@ -326,6 +344,33 @@ public abstract class SpringLockssTestCase4 extends LockssTestCase4 {
     return platformDiskSpaceConfigPath;
   }
 
+
+  public String getMiscConfigPath() {
+    return miscConfigPath;
+  }
+
+  public void addParamToMiscConfig(String key, String value)
+      throws IOException {
+
+    if (miscConfigPath == null) {
+      // Get the path of the misc directory
+      String miscDirPath = getTempDir("misc").getAbsolutePath();
+      if (log.isDebug3()) log.debug3("miscDirPath = " + miscDirPath);
+
+      // The path to the file.
+      miscConfigPath = miscDirPath + File.separator + MISC_CONFIG_FILENAME;
+    }
+
+    String param = key + "=" + value + "\n";
+
+    // Append to the misc file.
+    Files.write(Paths.get(miscConfigPath),
+        param.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+
+    if (log.isDebug2()) log.debug2("miscConfigPath = "
+        + miscConfigPath);
+  }
+
   /**
    * Copies a file or directory to the temporary directory.
    *
@@ -395,6 +440,7 @@ public abstract class SpringLockssTestCase4 extends LockssTestCase4 {
   protected File getUiPortConfigFile() {
     return uiPortConfigFile;
   }
+
 
   /**
    * Creates the configuration file that specifies the database properties.
