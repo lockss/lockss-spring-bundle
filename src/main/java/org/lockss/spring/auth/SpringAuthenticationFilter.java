@@ -351,7 +351,11 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
 
     UserAccount userAccount = acctMgr.getUserOrNull(credentials[0]);
     if (userAccount == null) {
-      log.info("Invalid credentials = {}:{}", credentials[0], "********");
+      log.info("Invalid credentials = {}:{} from {}: {} {}",
+          credentials[0], "********",
+          httpRequest.getRemoteAddr(),
+          httpRequest.getMethod().toUpperCase(),
+          httpRequest.getRequestURI().toLowerCase());
       sendUnauthenticated(httpResponse, BAD_CREDENTIALS);
       return;
     }
