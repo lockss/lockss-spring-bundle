@@ -35,6 +35,7 @@ import org.lockss.app.LockssApp;
 import org.lockss.app.LockssDaemon;
 import org.lockss.log.L4JLogger;
 import org.lockss.spring.converter.LockssHttpEntityMethodProcessor;
+import org.lockss.spring.converter.SpringBugFixStringToEnumConverterFactory;
 import org.lockss.spring.error.SpringControllerAdvice;
 import org.lockss.util.rest.multipart.MultipartMessageHttpMessageConverter;
 import org.lockss.util.time.TimeBase;
@@ -45,6 +46,8 @@ import org.springframework.boot.web.servlet.error.DefaultErrorAttributes;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.convert.converter.ConverterFactory;
+import org.springframework.format.FormatterRegistry;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.support.AllEncompassingFormHttpMessageConverter;
 import org.springframework.web.accept.ContentNegotiationManager;
@@ -123,6 +126,12 @@ public abstract class BaseSpringBootApplication {
   // FIXME: This was a mistake; revert (and make sure to update our clients)
   @Configuration
   public static class SpringMvcCustomization implements WebMvcConfigurer {
+    @Override
+    @SuppressWarnings("unchecked")
+    public void addFormatters(FormatterRegistry registry) {
+      registry.addConverterFactory(new SpringBugFixStringToEnumConverterFactory());
+    }
+
     @Bean
     public DefaultErrorAttributes errorAttributes() {
       return new DefaultErrorAttributes() {
