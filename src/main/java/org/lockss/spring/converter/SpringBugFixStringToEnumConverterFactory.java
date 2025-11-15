@@ -30,7 +30,7 @@ import org.springframework.core.convert.converter.ConverterFactory;
  * @since 3.0
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
-final class SpringBugFixStringToEnumConverterFactory implements ConverterFactory<String, Enum> {
+public final class SpringBugFixStringToEnumConverterFactory implements ConverterFactory<String, Enum> {
 
         // Can't use ConversionUtil#getEnumType (ConversionUtils is package-private); simply copy here
         public static Class<?> getEnumType(Class<?> targetType) {
@@ -68,7 +68,7 @@ final class SpringBugFixStringToEnumConverterFactory implements ConverterFactory
                           return (T)MethodUtils.invokeStaticMethod(enumType, "fromValue", source);
                         }
 			catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException exc) {
-			  throw new RuntimeException("No fromValue method in the enum " + enumType.getName())// what to do here?
+			  throw new RuntimeException("No fromValue method in the enum " + enumType.getName());// what to do here?
 			}
 		}
 	}
