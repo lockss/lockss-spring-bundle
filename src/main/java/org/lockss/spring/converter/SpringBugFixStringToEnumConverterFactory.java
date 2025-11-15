@@ -68,7 +68,7 @@ public final class SpringBugFixStringToEnumConverterFactory implements Converter
                           return (T)MethodUtils.invokeStaticMethod(enumType, "fromValue", source);
                         }
 			catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException exc) {
-			  throw new RuntimeException("No fromValue method in the enum " + enumType.getName());// what to do here?
+			  throw new RuntimeException("No fromValue method in the enum " + enumType.getName(), exc); // what to do here?
 			}
 		}
 	}
