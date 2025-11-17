@@ -21,6 +21,7 @@ import java.lang.reflect.InvocationTargetException;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.core.convert.converter.ConverterFactory;
+import org.springframework.util.Assert;
 
 /**
  * Converts from a String to a {@link java.lang.Enum} by calling {@link Enum#valueOf(Class, String)}.
@@ -38,9 +39,7 @@ public final class SpringBugFixStringToEnumConverterFactory implements Converter
           while (enumType != null && !enumType.isEnum()) {
                   enumType = enumType.getSuperclass();
           }
-          if (enumType == null) {
-            throw new NullPointerException("The target type " + targetType.getName() + " does not refer to an enum");
-          }
+          Assert.notNull(enumType, () -> "The target type " + targetType.getName() + " does not refer to an enum");
           return enumType;
         }
   
@@ -48,7 +47,6 @@ public final class SpringBugFixStringToEnumConverterFactory implements Converter
 	public <T extends Enum> Converter<String, T> getConverter(Class<T> targetType) {
 		return new SpringBugFixStringToEnum(/*ConversionUtils.*/getEnumType(targetType));
 	}
-
 
 	private static class SpringBugFixStringToEnum<T extends Enum> implements Converter<String, T> {
 
@@ -65,10 +63,14 @@ public final class SpringBugFixStringToEnumConverterFactory implements Converter
 				return null;
 			}
 			try {
-                          return (T)MethodUtils.invokeStaticMethod(enumType, "fromValue", source);
+                          T result = (T)MethodUtils.invokeStaticMethod(enumType, "fromValue", source);
+                          if (result == null) {
+                            throw new IllegalArgumentException("Illegal value of " + enumType.getName() + ": " + source);
+                          }
+                          return result;
                         }
 			catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException exc) {
-			  throw new RuntimeException("No fromValue method in the enum " + enumType.getName(), exc); // what to do here?
+			  throw new RuntimeException("Should not happen: No fromValue method in the enum " + enumType.getName(), exc); // what to do here?
 			}
 		}
 	}
