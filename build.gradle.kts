@@ -18,17 +18,20 @@ description = "POM bundle and classes for LOCKSS projects using Spring Boot"
 // Export test JAR for other projects
 val publishTestJar: Boolean by extra(true)
 
+// Globally exclude Spring Boot's default logging to use Log4J2 instead
+configurations.all {
+    exclude(group = "org.springframework.boot", module = "spring-boot-starter-logging")
+    exclude(group = "ch.qos.logback", module = "logback-classic")
+    exclude(group = "org.apache.logging.log4j", module = "log4j-to-slf4j")
+}
+
 dependencies {
     // Internal dependencies
     api(project(":lockss-core"))
     api(project(":lockss-plugin-compat"))
 
     // Spring Boot starters
-    api(libs.spring.boot.starter.web) {
-        exclude(group = "org.slf4j", module = "log4j-over-slf4j")
-        exclude(group = "org.springframework.boot", module = "spring-boot-starter-logging")
-        exclude(group = "ch.qos.logback", module = "logback-classic")
-    }
+    api(libs.spring.boot.starter.web)
     api(libs.spring.boot.starter.tomcat)
     api(libs.spring.boot.starter.security)
     api(libs.spring.boot.starter.validation)
