@@ -40,9 +40,9 @@ import org.lockss.spring.error.SpringControllerAdvice;
 import org.lockss.util.rest.multipart.MultipartMessageHttpMessageConverter;
 import org.lockss.util.time.TimeBase;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.http.HttpMessageConverters;
+import org.springframework.boot.http.converter.autoconfigure.HttpMessageConverters;
 import org.springframework.boot.web.error.ErrorAttributeOptions;
-import org.springframework.boot.web.servlet.error.DefaultErrorAttributes;
+import org.springframework.boot.webmvc.error.DefaultErrorAttributes;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -153,13 +153,6 @@ public abstract class BaseSpringBootApplication {
       urlPathHelper.setUrlDecode(false);
       configurer.setUrlPathHelper(urlPathHelper);
 
-      // Prevent Spring from interpreting the end of a URL as a file suffix.
-      configurer.setUseSuffixPatternMatch(false);
-      configurer.setUseRegisteredSuffixPatternMatch(false);
-
-      // Prevent Spring from thinking that a URL is the same as the same URL
-      // with a slash appended to it.
-      configurer.setUseTrailingSlashMatch(false);
     }
 
     @Override
@@ -168,11 +161,8 @@ public abstract class BaseSpringBootApplication {
       // from interpreting a "format=..." parameter for content type
       // specification and use only the Accept header for content type
       // negotiation.
-      configurer.favorPathExtension(false)
-          .favorParameter(false)
-          .ignoreAcceptHeader(false)
-          .useJaf(false)
-          .ignoreUnknownPathExtensions(false);
+      configurer.favorParameter(false)
+          .ignoreAcceptHeader(false);
     }
 
 //    @Bean

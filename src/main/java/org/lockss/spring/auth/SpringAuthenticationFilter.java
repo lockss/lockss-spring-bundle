@@ -32,7 +32,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package org.lockss.spring.auth;
 
 import java.io.IOException;
-import java.security.AccessControlException;
+// AccessControlException removed (deprecated for removal in JEP 486);
+// SecurityException (its superclass) is used instead.
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -406,7 +407,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
     case BASIC_AUTH_TYPE: return true;
     default:
       log.error("authenticationType = {}", authType);
-      throw new AccessControlException(authType + ": " + INVALID_AUTH_TYPE);
+      throw new SecurityException(authType + ": " + INVALID_AUTH_TYPE);
     }
   }
 

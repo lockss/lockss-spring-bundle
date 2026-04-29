@@ -66,7 +66,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.accept.ContentNegotiationManager;
-import org.springframework.web.accept.PathExtensionContentNegotiationStrategy;
+import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.context.request.ServletWebRequest;
@@ -91,7 +91,6 @@ public class LockssHttpEntityMethodProcessor extends AbstractMessageConverterMet
 			SetUtil.set(HttpMethod.GET, HttpMethod.HEAD);
 
 	private ContentNegotiationManager contentNegotiationManager = null;
-	private PathExtensionContentNegotiationStrategy pathStrategy;
 	private Set<String> safeExtensions = new HashSet<String>();
 
 	/* Extensions associated with the built-in message converters */
@@ -121,7 +120,6 @@ public class LockssHttpEntityMethodProcessor extends AbstractMessageConverterMet
 
 		this.contentNegotiationManager = manager;
 
-		this.pathStrategy = initPathStrategy(this.contentNegotiationManager);
 		this.safeExtensions.addAll(this.contentNegotiationManager.getAllFileExtensions());
 		this.safeExtensions.addAll(WHITELISTED_EXTENSIONS);
 	}
@@ -149,7 +147,6 @@ public class LockssHttpEntityMethodProcessor extends AbstractMessageConverterMet
 
 		this.contentNegotiationManager = manager;
 
-		this.pathStrategy = initPathStrategy(this.contentNegotiationManager);
 		this.safeExtensions.addAll(this.contentNegotiationManager.getAllFileExtensions());
 		this.safeExtensions.addAll(WHITELISTED_EXTENSIONS);
 	}
@@ -226,8 +223,8 @@ public class LockssHttpEntityMethodProcessor extends AbstractMessageConverterMet
 		HttpHeaders outputHeaders = outputMessage.getHeaders();
 		HttpHeaders entityHeaders = responseEntity.getHeaders();
 		if (!entityHeaders.isEmpty()) {
-			for (Map.Entry<String, List<String>> entry : entityHeaders.entrySet()) {
-				if (HttpHeaders.VARY.equals(entry.getKey()) && outputHeaders.containsKey(HttpHeaders.VARY)) {
+			for (Map.Entry<String, List<String>> entry : entityHeaders.headerSet()) {
+				if (HttpHeaders.VARY.equals(entry.getKey()) && outputHeaders.containsHeader(HttpHeaders.VARY)) {
 					List<String> values = getVaryRequestHeadersToAdd(outputHeaders, entityHeaders);
 					if (!values.isEmpty()) {
 						outputHeaders.setVary(values);
@@ -240,7 +237,7 @@ public class LockssHttpEntityMethodProcessor extends AbstractMessageConverterMet
 		}
 
 		if (responseEntity instanceof ResponseEntity) {
-			int returnStatus = ((ResponseEntity<?>) responseEntity).getStatusCodeValue();
+			int returnStatus = ((ResponseEntity<?>) responseEntity).getStatusCode().value();
 			outputMessage.getServletResponse().setStatus(returnStatus);
 			if (returnStatus == 200) {
 				if (SAFE_METHODS.contains(inputMessage.getMethod())
@@ -334,7 +331,7 @@ public class LockssHttpEntityMethodProcessor extends AbstractMessageConverterMet
 	 */
 	private MediaType getMostSpecificMediaType(MediaType acceptType, MediaType produceType) {
 		MediaType produceTypeToUse = produceType.copyQualityValue(acceptType);
-		return (MediaType.SPECIFICITY_COMPARATOR.compare(acceptType, produceTypeToUse) <= 0 ? acceptType : produceTypeToUse);
+		return (!acceptType.isLessSpecific(produceTypeToUse) ? acceptType : produceTypeToUse);
 	}
 
 	private static final MediaType MEDIA_TYPE_APPLICATION = new MediaType("application");
@@ -354,7 +351,7 @@ public class LockssHttpEntityMethodProcessor extends AbstractMessageConverterMet
 	 */
 	private void addContentDispositionHeader(ServletServerHttpRequest request, ServletServerHttpResponse response) {
 		HttpHeaders headers = response.getHeaders();
-		if (headers.containsKey(HttpHeaders.CONTENT_DISPOSITION)) {
+		if (headers.containsHeader(HttpHeaders.CONTENT_DISPOSITION)) {
 			return;
 		}
 
@@ -415,13 +412,7 @@ public class LockssHttpEntityMethodProcessor extends AbstractMessageConverterMet
 	}
 
 	private boolean safeMediaTypesForExtension(String extension) {
-		List<MediaType> mediaTypes = null;
-		try {
-			mediaTypes = this.pathStrategy.resolveMediaTypeKey(null, extension);
-		}
-		catch (HttpMediaTypeNotAcceptableException ex) {
-			// Ignore
-		}
+		List<MediaType> mediaTypes = MediaTypeFactory.getMediaTypes("file." + extension);
 		if (CollectionUtils.isEmpty(mediaTypes)) {
 			return false;
 		}
@@ -431,12 +422,6 @@ public class LockssHttpEntityMethodProcessor extends AbstractMessageConverterMet
 			}
 		}
 		return true;
-	}
-
-	private static PathExtensionContentNegotiationStrategy initPathStrategy(ContentNegotiationManager manager) {
-		Class<PathExtensionContentNegotiationStrategy> clazz = PathExtensionContentNegotiationStrategy.class;
-		PathExtensionContentNegotiationStrategy strategy = manager.getStrategy(clazz);
-		return (strategy != null ? strategy : new PathExtensionContentNegotiationStrategy());
 	}
 
 	private boolean safeMediaType(MediaType mediaType) {
@@ -498,7 +483,7 @@ public class LockssHttpEntityMethodProcessor extends AbstractMessageConverterMet
 		}
 
 		List<MediaType> mediaTypes = new ArrayList<MediaType>(compatibleMediaTypes);
-		MediaType.sortBySpecificityAndQuality(mediaTypes);
+		MimeTypeUtils.sortBySpecificity(mediaTypes);
 
 		// LOCKSS: Get and use the Content-Type from the OutputMessage if set explicitly
 		MediaType selectedMediaType = outputMessage.getHeaders().getContentType();

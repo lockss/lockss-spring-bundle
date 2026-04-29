@@ -35,14 +35,14 @@ import org.lockss.account.AccountManager;
 import org.lockss.log.L4JLogger;
 import org.lockss.app.LockssDaemon;
 import org.lockss.config.ConfigManager;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.EventListener;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.ProviderManager;
-import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
@@ -59,7 +59,7 @@ import org.springframework.security.web.firewall.HttpFirewall;
  */
 @Configuration
 @EnableWebSecurity
-@EnableGlobalMethodSecurity(prePostEnabled = true)
+@EnableMethodSecurity
 public class SpringSecurityConfigurer {
 
   private final static L4JLogger log = L4JLogger.getLogger();
@@ -112,7 +112,7 @@ public class SpringSecurityConfigurer {
     log.debug2("Invoked.");
 
     // Force each and every request to be authenticated.
-    http.csrf().disable().authorizeRequests().anyRequest().authenticated();
+    http.csrf(csrf -> csrf.disable()).authorizeHttpRequests(auth -> auth.anyRequest().authenticated());
 
     log.debug2("Installing auth filter");
     // The Basic authentication filter to be used.
