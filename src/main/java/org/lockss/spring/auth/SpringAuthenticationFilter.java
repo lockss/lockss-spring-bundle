@@ -182,10 +182,12 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
   Pattern IP_PROTECTED_PATHS = Pattern.compile("^/(usernames|users).*");
 
   protected boolean isRestrictedPath(String reqUri) {
-    UriComponents reqUriComponents =
-        UriComponentsBuilder.fromUriString(reqUri).build();
+    // Disabled becuase prevents V1 migrator from copying user accounts to V2
+    return false;
+//     UriComponents reqUriComponents =
+//         UriComponentsBuilder.fromUriString(reqUri).build();
 
-    return IP_PROTECTED_PATHS.matcher(reqUriComponents.getPath()).matches();
+//     return IP_PROTECTED_PATHS.matcher(reqUriComponents.getPath()).matches();
   }
 
   /**
@@ -277,11 +279,16 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
       return;
     }
 
-    // Does this request require an authenticated user
-    if (!requiresAuthentication(httpRequest)) {
-	// No, set the authenticated principal to one with minimal capabilities
-      log.trace("Authentication not required for {}", reqUri);
+    // Get the authorization header.
+    String authorizationHeader = httpRequest.getHeader("authorization");
+    log.trace("authorizationHeader = {}", authorizationHeader);
 
+    // Allow some requests without auth
+    if (authorizationHeader == null &&
+        !requiresAuthentication(srcIp, httpRequest)) {
+      // Set the authenticated principal to one with minimal capabilities
+
+      log.trace("Authentication not supplied, and not required for {}", reqUri);
       SecurityContextHolder.getContext().setAuthentication(
           getUnprivilegedUnauthenticatedUserToken());
 
@@ -317,10 +324,6 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
       }
     }
 
-    // Get the authorization header.
-    String authorizationHeader = httpRequest.getHeader("authorization");
-    log.trace("authorizationHeader = {}", authorizationHeader);
-
     if (authorizationHeader == null) {
       log.info(MISSING_AUTH_HEADER);
       sendUnauthenticated(httpResponse, MISSING_AUTH_HEADER);
@@ -348,7 +351,11 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
 
     UserAccount userAccount = acctMgr.getUserOrNull(credentials[0]);
     if (userAccount == null) {
-      log.info("Invalid credentials = {}:{}", credentials[0], "********");
+      log.info("Invalid credentials = {}:{} from {}: {} {}",
+          credentials[0], "********",
+          httpRequest.getRemoteAddr(),
+          httpRequest.getMethod().toUpperCase(),
+          httpRequest.getRequestURI().toLowerCase());
       sendUnauthenticated(httpResponse, BAD_CREDENTIALS);
       return;
     }
@@ -431,7 +438,7 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
     httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED, msg);
   }
 
-  /** Send 401 Forbidden */
+  /** Send 403 Forbidden */
   private void sendForbidden(HttpServletResponse httpResponse, String msg)
       throws IOException {
     SecurityContextHolder.clearContext();
@@ -468,8 +475,9 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
    * @param httpRequest A HttpServletRequest with the incoming request.
    * @return true if this request requires authentication, false otherwise.
    */
-  boolean requiresAuthentication(HttpServletRequest httpRequest) {
-    return requiresAuthentication(httpRequest.getMethod().toUpperCase(),
+  boolean requiresAuthentication(String srcIp, HttpServletRequest httpRequest) {
+    return requiresAuthentication(srcIp,
+                                  httpRequest.getMethod().toUpperCase(),
 				  httpRequest.getRequestURI().toLowerCase());
   }
 
@@ -480,18 +488,29 @@ public class SpringAuthenticationFilter extends GenericFilterBean {
    * @param requestUri A String with the request URI.
    * @return true if this request requires authentication, false otherwise.
    */
-  boolean requiresAuthentication(String httpMethodName, String requestUri) {
-    log.trace("requiresAuthentication({}, {})", httpMethodName, requestUri);
-
-    boolean result = !isStatusOrDocFetch(httpMethodName, requestUri);
-
-    // Conditionally allow unauthenticated read requests
-    if (result && allowUnauthenticatedRead &&
-	isReadRequest(httpMethodName, requestUri)) {
-      result = false;
+  boolean requiresAuthentication(String srcIp,
+                                 String httpMethodName, String requestUri) {
+    if (isStatusOrDocFetch(httpMethodName, requestUri)) {
+      log.trace("Request for {} doesn't require authentication", requestUri);
+      return false;
     }
-    log.trace("result = {}", result);
-    return result;
+
+    // Conditionally allow unauthenticated read requests from local clients
+    try {
+      if (allowUnauthenticatedRead &&
+          isReadRequest(httpMethodName, requestUri) &&
+          localFilter.isIpAllowed(srcIp)) {
+        log.trace("Local GET from {} for {} doesn't require authentication",
+                  srcIp, requestUri);
+        return false;
+      }
+    } catch (IpFilter.MalformedException e) {
+      log.warn("requiresAuthentication() error, returning true", e);
+      return true;
+    }
+    log.trace("Request from {} for {} does require authentication",
+              srcIp, requestUri);
+    return true;
   }
 
   /**

@@ -40,6 +40,11 @@ public class Roles {
   public static final String ROLE_USER_ADMIN = LockssServlet.ROLE_USER_ADMIN;
 
   /**
+   * Synonym of ROLE_USER_ADMIN used where we're not sure whether we
+   * want minimal access or maximal harmless access */
+  public static final String ROLE_CAUTIOUS = ROLE_USER_ADMIN;
+
+  /**
    * Maximum capabilities role.
    */
   public static final String ROLE_ALL_ACCESS = ROLE_USER_ADMIN;

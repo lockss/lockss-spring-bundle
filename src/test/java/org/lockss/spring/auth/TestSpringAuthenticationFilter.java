@@ -62,22 +62,32 @@ public class TestSpringAuthenticationFilter extends SpringLockssTestCase4 {
     }
   }
 
+  static String IP_EXT = "1.1.1.1";
+
   @Test
   public void testRequiresUserAuth() {
-    assertTrue(authFilter.requiresAuthentication("PUT", "/endpoint"));
-    assertTrue(authFilter.requiresAuthentication("GET", "/endpoint"));
-    assertFalse(authFilter.requiresAuthentication("GET", "/status"));
-    assertTrue(authFilter.requiresAuthentication("PUT", "/status"));
-    assertFalse(authFilter.requiresAuthentication("GET", "/v3/api-docs"));
-    assertFalse(authFilter.requiresAuthentication("GET", "/swagger-ui.html"));
-    assertFalse(authFilter.requiresAuthentication("GET",
+    assertTrue(authFilter.requiresAuthentication(IP_EXT, "PUT", "/endpoint"));
+    assertTrue(authFilter.requiresAuthentication(IP_EXT, "GET", "/endpoint"));
+    assertFalse(authFilter.requiresAuthentication(IP_EXT, "GET", "/status"));
+    assertTrue(authFilter.requiresAuthentication(IP_EXT, "PUT", "/status"));
+    assertFalse(authFilter.requiresAuthentication(IP_EXT, "GET", "/v3/api-docs"));
+    assertFalse(authFilter.requiresAuthentication(IP_EXT, "GET", "/swagger-ui.html"));
+    assertFalse(authFilter.requiresAuthentication(IP_EXT, "GET",
 						  "/swagger-resources/foo"));
-    assertFalse(authFilter.requiresAuthentication("GET",
+    assertFalse(authFilter.requiresAuthentication(IP_EXT, "GET",
 						  "/webjars/springfox-swagger-ui/bar"));
 
     ConfigurationUtil.addFromArgs(SpringAuthenticationFilter.PARAM_ALLOW_UNAUTHENTICATED_READ, "true");
-    assertTrue(authFilter.requiresAuthentication("PUT", "/endpoint"));
-    assertFalse(authFilter.requiresAuthentication("GET", "/endpoint"));
+    assertTrue(authFilter.requiresAuthentication(IP_EXT, "PUT", "/endpoint"));
+    assertTrue(authFilter.requiresAuthentication("1.2.3.4",
+                                                 "GET", "/endpoint"));
+    ConfigurationUtil.addFromArgs(ConfigManager.PARAM_PLATFORM_CONTAINER_SUBNETS,
+				  "1.2.3.0/24");
+    assertFalse(authFilter.requiresAuthentication("1.2.3.4",
+                                                 "GET", "/endpoint"));
+    ConfigurationUtil.addFromArgs(SpringAuthenticationFilter.PARAM_ALLOW_UNAUTHENTICATED_READ, "false");
+    assertTrue(authFilter.requiresAuthentication("1.2.3.4",
+                                                 "GET", "/endpoint"));
   }
 
   @Test
@@ -146,11 +156,12 @@ public class TestSpringAuthenticationFilter extends SpringLockssTestCase4 {
 
   @Test
   public void testIsRestrictedPath() throws Exception {
-    assertFalse(authFilter.isRestrictedPath("/xyzzy"));
-    assertTrue(authFilter.isRestrictedPath("/usernames"));
-    assertTrue(authFilter.isRestrictedPath("/usernames/"));
-    assertTrue(authFilter.isRestrictedPath("/users"));
-    assertTrue(authFilter.isRestrictedPath("/users/"));
-    assertTrue(authFilter.isRestrictedPath("/users/xyzzy"));
+    assertFalse(authFilter.isRestrictedPath("/users"));
+//     assertFalse(authFilter.isRestrictedPath("/xyzzy"));
+//     assertTrue(authFilter.isRestrictedPath("/usernames"));
+//     assertTrue(authFilter.isRestrictedPath("/usernames/"));
+//     assertTrue(authFilter.isRestrictedPath("/users"));
+//     assertTrue(authFilter.isRestrictedPath("/users/"));
+//     assertTrue(authFilter.isRestrictedPath("/users/xyzzy"));
   }
 }
