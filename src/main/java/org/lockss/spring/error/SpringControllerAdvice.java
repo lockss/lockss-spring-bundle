@@ -71,7 +71,7 @@ public class SpringControllerAdvice {
   @ExceptionHandler(LockssRestServiceException.class)
   public ResponseEntity<RestResponseErrorBody.RestResponseError> handler(final LockssRestServiceException lrse) {
 
-    // Content-Type hint to LockssHttpEntityMethodProcessor
+    // Explicit Content-Type: the error body is always JSON
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
 
@@ -88,7 +88,7 @@ public class SpringControllerAdvice {
   @ExceptionHandler(UnsupportedOperationException.class)
   public ResponseEntity<RestResponseErrorBody.RestResponseError> handler(final UnsupportedOperationException e) {
 
-    // Content-Type hint to LockssHttpEntityMethodProcessor
+    // Explicit Content-Type: the error body is always JSON
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
     RestResponseErrorBody.RestResponseError rre =
